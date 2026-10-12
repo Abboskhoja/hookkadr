@@ -1,0 +1,26 @@
+{
+  "name": "hookkadr-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HOOKKADR API: sign-in, credits and the AI proxy (provider keys live here, never in the app).",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/server.ts",
+    "dev": "DEV_AUTH=1 PROVIDERS=fake node --watch src/server.ts",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/multipart": "^9.4.0",
+    "fastify": "^5.12.5",
+    "firebase-admin": "^13.10.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^5.9.3"
+  }
+}

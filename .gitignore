@@ -1,0 +1,17 @@
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+.idea/
+*.iml
+.DS_Store
+.flutter-plugins
+.flutter-plugins-dependencies
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+android/key.properties
