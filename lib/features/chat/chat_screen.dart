@@ -1804,15 +1804,7 @@ class _ModeTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(mode.icon, color: color, size: 22),
-              ),
+              GlassIcon(mode.icon, color: color),
               const Spacer(),
               Text(
                 mode.title,

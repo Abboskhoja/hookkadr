@@ -1,10 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../app/app_controller.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/brand_logo.dart';
+import '../../core/widgets/common.dart';
 import '../../core/widgets/poster.dart';
 import '../chat/chat_screen.dart';
 import '../editor/editor_screen.dart';
@@ -228,7 +230,6 @@ class _QuickCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final tint = action.warm ? AppColors.brown : AppColors.blue;
-    final bubble = action.warm ? AppColors.sand : AppColors.sky;
     return Semantics(
       button: true,
       label: action.title,
@@ -255,14 +256,10 @@ class _QuickCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: bubble,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(action.icon, color: tint, size: 22),
+                GlassIcon(
+                  action.icon,
+                  color: tint,
+                  tint: action.warm ? AppColors.coral : null,
                 ),
                 const Spacer(),
                 Text(
@@ -526,35 +523,43 @@ class _AiStatus extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: ready ? AppColors.sky : AppColors.sand,
-            borderRadius: BorderRadius.circular(18),
+        // A glass capsule: blue tint when ready, warm while preparing.
+        child: LiquidGlassLite(
+          shape: const LiquidGlassShape.roundedRectangle(
+            cornerRadius: 22,
+            borderWidth: 1.2,
+            lightIntensity: 1.2,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                ready ? LucideIcons.circleCheck : LucideIcons.loader,
-                size: 15,
-                color: ready ? AppColors.blue : AppColors.brown,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                ready
-                    ? 'Kadr AI tayyor'
-                    : progress != null
-                    ? 'Kadr AI ${(progress * 100).round()}%'
-                    : 'Kadr AI',
-                style: TextStyle(
-                  color: p.textPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+          pickup: LiquidGlassLitePickup.surface,
+          color: (ready ? AppColors.blue : AppColors.coral).withValues(
+            alpha: 0.14,
+          ),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 44),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  ready ? LucideIcons.circleCheck : LucideIcons.loader,
+                  size: 15,
+                  color: ready ? AppColors.blue : AppColors.brown,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Text(
+                  ready
+                      ? 'Kadr AI tayyor'
+                      : progress != null
+                      ? 'Kadr AI ${(progress * 100).round()}%'
+                      : 'Kadr AI',
+                  style: TextStyle(
+                    color: p.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

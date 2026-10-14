@@ -43,5 +43,8 @@ void main() {
     await tester.drag(find.byType(Scrollable).last, const Offset(0, -900));
     await tester.pump(const Duration(seconds: 1));
     await shot('06_profile_memory');
+    await tester.tap(find.text('Bosh sahifa').first);
+    await tester.pump(const Duration(seconds: 1));
+    await shot('07_home_again');
   });
 }

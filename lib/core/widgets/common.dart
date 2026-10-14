@@ -69,6 +69,136 @@ class GlassIconButton extends StatelessWidget {
   );
 }
 
+/// An icon on a small tinted glass tile. Lite glass — frost, tint and a lit
+/// rim, no shader — so every card in a long list can have one for free.
+class GlassIcon extends StatelessWidget {
+  const GlassIcon(
+    this.icon, {
+    super.key,
+    this.color,
+    this.tint,
+    this.size = 44,
+    this.radius = 14,
+    this.iconSize = 22,
+  });
+  final IconData icon;
+  final Color? color;
+
+  /// Glass tint when it should differ from the icon colour (a dark brown
+  /// icon reads best on caramel glass).
+  final Color? tint;
+  final double size;
+  final double radius;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? context.palette.accent;
+    return SizedBox.square(
+      dimension: size,
+      child: LiquidGlassLite(
+        shape: LiquidGlassShape.roundedRectangle(
+          cornerRadius: radius,
+          borderWidth: 1.2,
+          lightIntensity: 1.2,
+        ),
+        pickup: LiquidGlassLitePickup.surface,
+        color: (tint ?? c).withValues(alpha: tint == null ? 0.16 : 0.24),
+        child: Center(
+          child: Icon(icon, color: c, size: iconSize),
+        ),
+      ),
+    );
+  }
+}
+
+/// A screen without an app bar: the large title scrolls away with the
+/// content and only what can be tapped — back and [actions], as glass —
+/// stays on top, over a soft fade that keeps it legible.
+class GlassPage extends StatelessWidget {
+  const GlassPage({
+    super.key,
+    required this.title,
+    required this.slivers,
+    this.actions = const [],
+  });
+  final String title;
+  final List<Widget> slivers;
+  final List<Widget> actions;
+
+  static const _controls = 60.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final mq = MediaQuery.of(context);
+    final canPop = Navigator.of(context).canPop();
+    final floating = canPop || actions.isNotEmpty;
+    final top = mq.padding.top;
+    return Scaffold(
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  top + (floating ? _controls : 12),
+                  20,
+                  8,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      title,
+                      style: AppText.display(context, size: 30),
+                    ),
+                  ),
+                ),
+              ),
+              ...slivers,
+              SliverToBoxAdapter(
+                child: SizedBox(height: mq.padding.bottom + 24),
+              ),
+            ],
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: top + (floating ? _controls : 0) + 12,
+            child: LiquidGlassScrollEdge(
+              edge: LiquidGlassEdge.top,
+              color: p.background.withValues(alpha: 0.92),
+              blur: 6,
+            ),
+          ),
+          if (floating)
+            Positioned(
+              top: top + 8,
+              left: 16,
+              right: 16,
+              child: Row(
+                children: [
+                  if (canPop)
+                    GlassIconButton(
+                      icon: LucideIcons.chevronLeft,
+                      tooltip: 'Orqaga',
+                      onTap: () => Navigator.of(context).maybePop(),
+                    ),
+                  const Spacer(),
+                  for (final a in actions)
+                    Padding(padding: const EdgeInsets.only(left: 8), child: a),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// The page heading. Screens have no app bar: the title sits in the page
 /// itself, pushed screens get a round back button, and nothing is painted
 /// across the top of the screen.
@@ -131,16 +261,7 @@ class IconBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? context.palette.accent;
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(11),
-      ),
-      child: Icon(icon, color: c, size: 22),
-    );
+    return GlassIcon(icon, color: color, size: 40, radius: 12);
   }
 }
 

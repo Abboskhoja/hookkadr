@@ -29,125 +29,113 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final p = context.palette;
-    return Scaffold(
-      // Lists run under the floating glass tab bar; their own bottom
-      // padding keeps the last row reachable above it.
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            const PageHeader('Profil va sozlamalar'),
-            Expanded(child: _content(context, app, p)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _content(BuildContext context, AppController app, AppPalette p) {
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        8,
-        20,
-        32 + MediaQuery.paddingOf(context).bottom,
-      ),
-      children: [
-        AppCard(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              StatusDot(on: app.aiReady),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  app.offlineInstalled
-                      ? 'Kadr AI telefonda tayyor: ${app.onDeviceSkills.join(', ')}.'
-                            '${app.painterInstalled ? '' : ' Rasm va video uchun “Rassom”ni o‘rnating.'}'
-                      : app.aiReady
-                      ? 'Kadr AI ulangan hisob orqali ishlaydi. Internetsiz ishlashi '
-                            'uchun pastdan “Miya”ni yuklab oling.'
-                      : 'Kadr AI hali yoqilmagan. Uni telefoningizga bir marta '
-                            'yuklab oling — keyin internetsiz ishlaydi.',
-                  style: AppText.body(context),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text('Kadr AI telefonda', style: AppText.caption(context)),
-        const SizedBox(height: 8),
-        const _OnDeviceCard(KadrModelPack.brain),
-        const SizedBox(height: 10),
-        const _OnDeviceCard(KadrModelPack.painter),
-        const SizedBox(height: 10),
-        const _OnDeviceCard(KadrModelPack.motion),
-        const SizedBox(height: 20),
-        Text('Kadr AI xotirasi', style: AppText.caption(context)),
-        const SizedBox(height: 8),
-        const _MemoryCard(),
-        const SizedBox(height: 20),
-        Text('Hisob (ixtiyoriy)', style: AppText.caption(context)),
-        const SizedBox(height: 8),
-        if (kHookkadrApiUrl.isNotEmpty) ...[
-          const HookkadrAccountCard(),
-          const SizedBox(height: 12),
-        ],
-        const LoginCard(),
-        const SizedBox(height: 12),
-        Text(
-          'Videolarni montaj qilish, kesish va eksport hisobsiz, internetsiz ham ishlaydi.',
-          style: AppText.caption(context),
-        ),
-        const SizedBox(height: 24),
-        Text('Professional', style: AppText.caption(context)),
-        const SizedBox(height: 8),
-        AppCard(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            children: [
-              SwitchListTile.adaptive(
-                value: app.proMode,
-                onChanged: app.setProMode,
-                title: const Text('Pro rejim'),
-                subtitle: const Text(
-                  'AI modelini tanlash, aniq sifat (720p–4K), token va prompt '
-                  'ko‘rinadi, muharrirda to‘liq timeline asboblari.',
-                ),
-              ),
-              if (app.proMode)
-                ListTile(
-                  leading: Icon(LucideIcons.keyRound, color: p.textSecondary),
-                  title: const Text('AI ulanishlari'),
-                  subtitle: const Text(
-                    'O‘z API kalitingiz yoki internetsiz model',
-                  ),
-                  trailing: const Icon(LucideIcons.chevronRight, size: 18),
-                  onTap: () => Navigator.of(context).push(
-                    CupertinoPageRoute<void>(
-                      builder: (_) => const ConnectionsScreen(),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        Text('Ilova', style: AppText.caption(context)),
-        const SizedBox(height: 8),
-        AppCard(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: ListTile(
-            leading: Icon(LucideIcons.info, color: p.textSecondary),
-            title: const Text('Litsenziyalar'),
-            trailing: const Icon(LucideIcons.chevronRight, size: 18),
-            onTap: () =>
-                showLicensePage(context: context, applicationName: 'HOOKKADR'),
-          ),
+    return GlassPage(
+      title: 'Profil va sozlamalar',
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+          sliver: SliverList.list(children: _content(context, app, p)),
         ),
       ],
     );
+  }
+
+  List<Widget> _content(BuildContext context, AppController app, AppPalette p) {
+    return [
+      AppCard(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            StatusDot(on: app.aiReady),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                app.offlineInstalled
+                    ? 'Kadr AI telefonda tayyor: ${app.onDeviceSkills.join(', ')}.'
+                          '${app.painterInstalled ? '' : ' Rasm va video uchun “Rassom”ni o‘rnating.'}'
+                    : app.aiReady
+                    ? 'Kadr AI ulangan hisob orqali ishlaydi. Internetsiz ishlashi '
+                          'uchun pastdan “Miya”ni yuklab oling.'
+                    : 'Kadr AI hali yoqilmagan. Uni telefoningizga bir marta '
+                          'yuklab oling — keyin internetsiz ishlaydi.',
+                style: AppText.body(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 20),
+      Text('Kadr AI telefonda', style: AppText.caption(context)),
+      const SizedBox(height: 8),
+      const _OnDeviceCard(KadrModelPack.brain),
+      const SizedBox(height: 10),
+      const _OnDeviceCard(KadrModelPack.painter),
+      const SizedBox(height: 10),
+      const _OnDeviceCard(KadrModelPack.motion),
+      const SizedBox(height: 20),
+      Text('Kadr AI xotirasi', style: AppText.caption(context)),
+      const SizedBox(height: 8),
+      const _MemoryCard(),
+      const SizedBox(height: 20),
+      Text('Hisob (ixtiyoriy)', style: AppText.caption(context)),
+      const SizedBox(height: 8),
+      if (kHookkadrApiUrl.isNotEmpty) ...[
+        const HookkadrAccountCard(),
+        const SizedBox(height: 12),
+      ],
+      const LoginCard(),
+      const SizedBox(height: 12),
+      Text(
+        'Videolarni montaj qilish, kesish va eksport hisobsiz, internetsiz ham ishlaydi.',
+        style: AppText.caption(context),
+      ),
+      const SizedBox(height: 24),
+      Text('Professional', style: AppText.caption(context)),
+      const SizedBox(height: 8),
+      AppCard(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          children: [
+            SwitchListTile.adaptive(
+              value: app.proMode,
+              onChanged: app.setProMode,
+              title: const Text('Pro rejim'),
+              subtitle: const Text(
+                'AI modelini tanlash, aniq sifat (720p–4K), token va prompt '
+                'ko‘rinadi, muharrirda to‘liq timeline asboblari.',
+              ),
+            ),
+            if (app.proMode)
+              ListTile(
+                leading: Icon(LucideIcons.keyRound, color: p.textSecondary),
+                title: const Text('AI ulanishlari'),
+                subtitle: const Text(
+                  'O‘z API kalitingiz yoki internetsiz model',
+                ),
+                trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                onTap: () => Navigator.of(context).push(
+                  CupertinoPageRoute<void>(
+                    builder: (_) => const ConnectionsScreen(),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 24),
+      Text('Ilova', style: AppText.caption(context)),
+      const SizedBox(height: 8),
+      AppCard(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: ListTile(
+          leading: Icon(LucideIcons.info, color: p.textSecondary),
+          title: const Text('Litsenziyalar'),
+          trailing: const Icon(LucideIcons.chevronRight, size: 18),
+          onTap: () =>
+              showLicensePage(context: context, applicationName: 'HOOKKADR'),
+        ),
+      ),
+    ];
   }
 }
 

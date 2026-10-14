@@ -188,16 +188,16 @@ class _MontageScreenState extends State<MontageScreen> {
             'Montaj',
             actions: [
               if (_phase == _Phase.done)
-                IconButton(
+                GlassIconButton(
+                  icon: LucideIcons.rotateCcw,
                   tooltip: 'Yangi montaj',
-                  onPressed: () => setState(() {
+                  onTap: () => setState(() {
                     _clips.clear();
                     _phase = _Phase.setup;
                     _render = null;
                     _projectId = null;
                     _saved = false;
                   }),
-                  icon: const Icon(LucideIcons.rotateCcw),
                 ),
             ],
           ),

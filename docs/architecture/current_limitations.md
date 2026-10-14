@@ -1,6 +1,6 @@
 # Current limitations
 
-- Haqiqiy iPhone va Android qurilmalarda sinalmagan (NOT VERIFIED ON DEVICE).
+- Haqiqiy iPhone'da sinalmagan (NOT VERIFIED ON DEVICE). Android — 2026-10-15 kuni haqiqiy telefonda (Android 11, arm64, viva/MIUI) `flutter run` orqali o'rnatildi, qulamasdan ishga tushdi, protsessor tez variantni (`asimddp`) to'g'ri tanladi, Liquid Glass pastki panel va sahifalar to'g'ri ko'rindi. Kadr AI (miya/rassom/harakat) modellarini haqiqiy telefonda yuklab sinash hali qilinmagan.
 - iPhone build'larida Kadr AI miyasi va rassomi Metal (GPU) bilan, simulyatorda faqat CPU. Haqiqiy iPhone'dagi tezlik o'lchanmagan. Android: `libkadr_llm.so` va `libkadr_sd.so` arm64 uchun NDK 28 bilan yig'iladi (`packages/*/tool/build_android.sh`, tez armv8.2 dotprod + eski armv8-a varianti, faqat CPU — Vulkan yo'q); APK ichida borligi tekshirilgan, lekin Android qurilma yoki emulyatorda ishga tushirilmagan. Android'da modellar ilova ichiga joylanmaydi (Play Asset Delivery yo'q) — birinchi ishga tushishda Wi-Fi orqali tayyorlanadi.
 - Kadr AI 6 GB+ RAM talab qiladi; kichik modellar o'zbekchada yaroqsiz (benchmark).
 - Telefonda rasm (DreamShaper 8 LCM, SD 1.5) va video (AnimateDiff-Lightning) bor, lekin sifati SD 1.5 darajasida (448×768 rasm, 320×576 jonli klip, keyin 1080p'ga kattalashtiriladi). Jonli klip 2,7 s, matnli kadr chizolmaydi.

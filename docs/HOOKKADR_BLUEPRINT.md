@@ -928,4 +928,12 @@ tablet ikki ustunli layout, Riverpod/go_router migratsiyasi, backend.
 - `GlassIconButton` (`lib/core/widgets/common.dart`): suhbatdagi menyu/yangi suhbat/profil va `PageHeader` "orqaga" tugmasi shisha, bosilganda egiladi.
 - `main()` shaderlarni oldindan yuklaydi (`LiquidGlassShaders.ensureLoaded`).
 - Simulyatorda (iOS 27, Impeller) skrinshotlar bilan tekshirildi; haqiqiy telefonda va Android'da sinalmagan.
+- **Appbar butunlay ko'rinmaydi** (`GlassPage`): katta sarlavha kontent bilan birga yuqoriga ketadi; tepada faqat bosiladigan shisha tugmalar (orqaga, amallar) suzib turadi, ostida yumshoq `LiquidGlassScrollEdge` xiralashuvi. Profil, Shablonlar, Loyihalar, AI ulanishlari shunga o'tdi; Montaj/Reklama tayyor/Loyiha xatosi `PageHeader` bilan (fon yo'q, shisha tugmalar).
+- **Ikonka fonlari shisha** (`GlassIcon`, lite glass — shader'siz, har bir kartada arzon): bosh sahifa va AI Studiya kartalari, shablonlar, `IconBadge` (Profil kartalari). "Kadr AI tayyor" holati — shisha kapsula. Jigarrang ikonkalar karamel shisha ustida.
+
+### 2026-10-15 — Android haqiqiy telefonda tasdiqlandi
+
+- Foydalanuvchining shaxsiy Android telefonida (Android 11, MIUI/viva, arm64) `adb install` + ishga tushirish sinaldi: ilova qulamasdan ochildi, Liquid Glass pastki panel va `GlassPage` sarlavhalari to'g'ri ko'rindi, protsessor tez `libkadr_llm.so`/`libkadr_sd.so` variantini (dotprod) to'g'ri tanladi.
+- MIUI'da avval o'rnatish `INSTALL_FAILED_USER_RESTRICTED` bilan rad etilgan edi — sabab: "USB nosozliklarini aniqlash (Xavfsizlik sozlamalari)" alohida sozlamasi o'chiq edi (oddiy USB debugging'dan farqli). Foydalanuvchi uni yoqqach o'rnatish ishladi.
+- **Ehtiyot choras**i: bu foydalanuvchining shaxsiy telefoni, unda haqiqiy loyiha va shaxsiy xabarlar (Telegram) bor edi. Qurilmani avtomatik boshqarishda (adb orqali tap) skrinshot masshtabini noto'g'ri hisoblab, bir marta tasodifan Telegram'ga o'tib ketildi (hech narsa o'qilmadi/yuborilmadi, skrinshotlar darhol o'chirildi). **Saboq:** real qurilmada koordinata bilan bosishdan oldin UI elementining aniq joyini (`uiautomator dump` yoki shunga o'xshash) tekshirish kerak, skrinshotni ko'rib taxmin qilib bosish emas; agar qurilmada foydalanuvchining shaxsiy ma'lumotlari bo'lishi mumkin bo'lsa, odatdagidek ehtiyot bo'lish kerak.
 

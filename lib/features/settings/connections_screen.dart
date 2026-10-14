@@ -31,114 +31,110 @@ class ConnectionsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final p = context.palette;
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const PageHeader('AI ulanishlari'),
-            Expanded(child: _content(context, app, p)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _content(BuildContext context, AppController app, AppPalette p) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-      children: [
-        Text(
-          'Bir nechta AI ulang. Auto rejimida HOOKKADR har bir vazifaga '
-          'mosini o‘zi tanlaydi.',
-          style: AppText.caption(context),
-        ),
-        const SizedBox(height: 16),
-        const HookkadrAccountCard(),
-        const SizedBox(height: 10),
-        const LoginCard(),
-        const SizedBox(height: 10),
-        const _OfflineCard(),
-        const SectionTitle('API kalit (ilg‘or)'),
-        for (final k in ProviderKind.values.where(
-          (k) => k.needsKey && !k.usesLogin,
-        )) ...[
-          AppCard(
-            child: Row(
-              children: [
-                IconBadge(switch (k) {
-                  ProviderKind.hookkadr => LucideIcons.clapperboard,
-                  ProviderKind.openrouter => LucideIcons.logIn,
-                  ProviderKind.claude => LucideIcons.sparkles,
-                  ProviderKind.openai => LucideIcons.brainCircuit,
-                  ProviderKind.gemini => LucideIcons.eye,
-                  ProviderKind.offline => LucideIcons.smartphone,
-                }),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        k.label,
-                        style: AppText.body(context)
-                            .copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(k.role, style: AppText.caption(context)),
-                      const SizedBox(height: 4),
-                      Text(
-                        app.isConnected(k)
-                            ? 'Ulangan · ${maskKey(app.keyOf(k)!)}'
-                            : 'Ulanmagan',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: app.isConnected(k)
-                              ? AppColors.success
-                              : p.textSecondary,
-                        ),
-                      ),
-                      Text(
-                        'Model: ${_models[k]}',
-                        style: AppText.caption(context).copyWith(fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-                app.isConnected(k)
-                    ? TextButton(
-                        onPressed: () => app.disconnect(k),
-                        child: const Text(
-                          'Uzish',
-                          style: TextStyle(color: AppColors.danger),
-                        ),
-                      )
-                    : TextButton(
-                        onPressed: () => showConnectProviderSheet(context, k),
-                        child: const Text('Ulash'),
-                      ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-        ],
-        const SectionTitle('Maxfiylik'),
-        Text(
-          'Videolar faqat Gemini’ga (video tahlili uchun) yuboriladi, '
-          'har safar avval ruxsat so‘raladi. Matn va tahlil natijalari '
-          'tanlangan reja tuzuvchi AI’ga (Claude / OpenAI / Gemini) boradi. '
-          'Kalitlar loyihalardan alohida, xavfsiz xotirada turadi.',
-          style: AppText.caption(context),
-        ),
-        const SectionTitle('Muhim'),
-        Text(
-          'ChatGPT Plus/Pro yoki Claude Pro obunasi API ruxsatini bermaydi: '
-          'ulanish API kaliti orqali. “ChatGPT bilan kirish” OpenAI’ning '
-          'hamkorlik tasdig‘ini talab qiladi va hozircha mavjud emas.',
-          style: AppText.caption(context),
+    return GlassPage(
+      title: 'AI ulanishlari',
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+          sliver: SliverList.list(children: _content(context, app, p)),
         ),
       ],
     );
+  }
+
+  List<Widget> _content(BuildContext context, AppController app, AppPalette p) {
+    return [
+      Text(
+        'Bir nechta AI ulang. Auto rejimida HOOKKADR har bir vazifaga '
+        'mosini o‘zi tanlaydi.',
+        style: AppText.caption(context),
+      ),
+      const SizedBox(height: 16),
+      const HookkadrAccountCard(),
+      const SizedBox(height: 10),
+      const LoginCard(),
+      const SizedBox(height: 10),
+      const _OfflineCard(),
+      const SectionTitle('API kalit (ilg‘or)'),
+      for (final k in ProviderKind.values.where(
+        (k) => k.needsKey && !k.usesLogin,
+      )) ...[
+        AppCard(
+          child: Row(
+            children: [
+              IconBadge(switch (k) {
+                ProviderKind.hookkadr => LucideIcons.clapperboard,
+                ProviderKind.openrouter => LucideIcons.logIn,
+                ProviderKind.claude => LucideIcons.sparkles,
+                ProviderKind.openai => LucideIcons.brainCircuit,
+                ProviderKind.gemini => LucideIcons.eye,
+                ProviderKind.offline => LucideIcons.smartphone,
+              }),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      k.label,
+                      style: AppText.body(context)
+                          .copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(k.role, style: AppText.caption(context)),
+                    const SizedBox(height: 4),
+                    Text(
+                      app.isConnected(k)
+                          ? 'Ulangan · ${maskKey(app.keyOf(k)!)}'
+                          : 'Ulanmagan',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: app.isConnected(k)
+                            ? AppColors.success
+                            : p.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      'Model: ${_models[k]}',
+                      style: AppText.caption(context).copyWith(fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              app.isConnected(k)
+                  ? TextButton(
+                      onPressed: () => app.disconnect(k),
+                      child: const Text(
+                        'Uzish',
+                        style: TextStyle(color: AppColors.danger),
+                      ),
+                    )
+                  : TextButton(
+                      onPressed: () => showConnectProviderSheet(context, k),
+                      child: const Text('Ulash'),
+                    ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
+      const SectionTitle('Maxfiylik'),
+      Text(
+        'Videolar faqat Gemini’ga (video tahlili uchun) yuboriladi, '
+        'har safar avval ruxsat so‘raladi. Matn va tahlil natijalari '
+        'tanlangan reja tuzuvchi AI’ga (Claude / OpenAI / Gemini) boradi. '
+        'Kalitlar loyihalardan alohida, xavfsiz xotirada turadi.',
+        style: AppText.caption(context),
+      ),
+      const SectionTitle('Muhim'),
+      Text(
+        'ChatGPT Plus/Pro yoki Claude Pro obunasi API ruxsatini bermaydi: '
+        'ulanish API kaliti orqali. “ChatGPT bilan kirish” OpenAI’ning '
+        'hamkorlik tasdig‘ini talab qiladi va hozircha mavjud emas.',
+        style: AppText.caption(context),
+      ),
+    ];
   }
 }
 

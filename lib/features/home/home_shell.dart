@@ -3,6 +3,7 @@ import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/brand_logo.dart';
 import '../chat/chat_screen.dart';
 import '../projects/projects_screen.dart';
 import '../settings/settings_screen.dart';
@@ -21,6 +22,13 @@ class _HomeShellState extends State<HomeShell> {
   static const _home = 0, _studio = 1, _projects = 2, _profile = 4;
   int _tab = _home;
   final _requests = ValueNotifier<KadrRequest?>(null);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The header logo is there on the first frame, not a beat later.
+    precacheImage(const AssetImage(kBrandLogoAsset), context);
+  }
 
   @override
   void dispose() {
