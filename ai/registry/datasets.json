@@ -1,0 +1,105 @@
+{
+  "datasets": [
+    {
+      "id": "scene_quality_synth_v1",
+      "task": "frame_quality",
+      "createdAt": "2026-10-14T03:00:30+0500",
+      "samples": "data/datasets/scene_quality_synth_v1/samples.npz",
+      "sha256": "45534512ebad3c2587c363d100e03f50d21ce6fabe6511fd3a3c36fed072a7ee",
+      "rebuild": "uv run python -m hookkadr_ai.datasets.build --config configs/scene_quality_v1.json",
+      "featureVersion": 1,
+      "features": [
+        "lap_var_log",
+        "tenengrad_log",
+        "detail_ratio",
+        "edge_density",
+        "y_mean",
+        "y_std",
+        "p05",
+        "p50",
+        "p95",
+        "dark_frac",
+        "bright_frac",
+        "noise_log",
+        "colorfulness",
+        "sat_mean",
+        "entropy"
+      ],
+      "defects": [
+        "blurry",
+        "dark",
+        "overexposed",
+        "noisy",
+        "low_contrast"
+      ],
+      "positiveSeverity": 0.3,
+      "analysisFilter": "format=yuv420p,scale=w=384:h=384:force_original_aspect_ratio=decrease:flags=area,format=rgb24",
+      "sources": {
+        "manifest": "data/sources/commons/manifest.json",
+        "manifestSha256": "91469e00c696f8137f21e863ffd0286e488c1971a213383c3bc003b09dd00aef",
+        "count": 335,
+        "licences": {
+          "cc0": 317,
+          "pd": 18
+        },
+        "excludedTopics": [
+          "night"
+        ],
+        "snapshot": "registry/source_manifests/scene_quality_synth_v1.json"
+      },
+      "counts": {
+        "train": 2936,
+        "val": 576,
+        "test": 984
+      },
+      "positives": {
+        "train": {
+          "blurry": 809,
+          "dark": 413,
+          "overexposed": 407,
+          "noisy": 417,
+          "low_contrast": 397
+        },
+        "val": {
+          "blurry": 160,
+          "dark": 61,
+          "overexposed": 89,
+          "noisy": 87,
+          "low_contrast": 80
+        },
+        "test": {
+          "blurry": 257,
+          "dark": 119,
+          "overexposed": 147,
+          "noisy": 144,
+          "low_contrast": 136
+        }
+      },
+      "config": {
+        "id": "scene_quality_synth_v1",
+        "sourcesDir": "data/sources/commons",
+        "excludeTopics": [
+          "night"
+        ],
+        "seed": 20261014,
+        "defectiveVariants": 7,
+        "jpegQuality": [
+          70,
+          95
+        ],
+        "split": {
+          "train": 0.7,
+          "val": 0.1,
+          "test": 0.2
+        }
+      },
+      "builder": {
+        "git": "9a2c139",
+        "python": "3.12.15",
+        "numpy": "2.5.4",
+        "opencv": "5.0.0"
+      },
+      "labelling": "self-supervised: controlled defects with known severity on CC0/PD photos; not human-rated"
+    }
+  ]
+}

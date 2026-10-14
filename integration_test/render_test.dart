@@ -4,6 +4,13 @@ import 'package:ffmpeg_kit_flutter_new_full/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_full/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_full/return_code.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:hookkadr/features/ai/ai_clients.dart';
+import 'package:hookkadr/features/ai/claude_frame_analyst.dart';
 import 'package:hookkadr/features/analysis/domain/edit_plan.dart';
 import 'package:hookkadr/features/projects/project.dart';
 import 'package:hookkadr/features/plan/auto_editor.dart';
@@ -590,5 +597,283 @@ void main() {
       double.parse(media.getDuration()!),
       closeTo(5.0, 0.4),
     ); // 4 s + 1 s freeze
+  });
+
+  testWidgets(
+    'colour grade, logo end card, 3:4 and 24 fps are really rendered',
+    (tester) async {
+      final dir = await getTemporaryDirectory();
+      final clipPath = '${dir.path}/look_clip.mp4';
+      final logoPath = '${dir.path}/look_logo.png';
+      for (final f in [clipPath, logoPath]) {
+        if (File(f).existsSync()) File(f).deleteSync();
+      }
+      final enc = Platform.isIOS ? 'h264_videotoolbox' : 'h264_mediacodec';
+      final gen = await FFmpegKit.executeWithArguments([
+        '-y',
+        '-f',
+        'lavfi',
+        '-i',
+        'testsrc2=size=640x360:rate=30:duration=6',
+        '-f',
+        'lavfi',
+        '-i',
+        'sine=frequency=440:duration=6',
+        '-c:v',
+        enc,
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        '-shortest',
+        clipPath,
+      ]);
+      expect(ReturnCode.isSuccess(await gen.getReturnCode()), isTrue);
+      final logo = await FFmpegKit.executeWithArguments([
+        '-y',
+        '-f',
+        'lavfi',
+        '-i',
+        'color=c=red:s=400x200,format=rgba',
+        '-frames:v',
+        '1',
+        logoPath,
+      ]);
+      expect(
+        ReturnCode.isSuccess(await logo.getReturnCode()),
+        isTrue,
+        reason: await logo.getAllLogsAsString(),
+      );
+
+      Map<String, dynamic> base() => {
+        'schemaVersion': 1,
+        'title': 'Look',
+        'summary': 's',
+        'durationSec': 6,
+        'aspectRatio': '3:4',
+        'shots': [
+          {
+            'id': 's1',
+            'startSec': 0,
+            'endSec': 6,
+            'description': 'Asosiy',
+            'sourceClipId': 'clip_01',
+            'sourceIn': 0,
+            'sourceOut': 6,
+          },
+        ],
+        'mediaSlots': <Map<String, dynamic>>[],
+        'captions': <Map<String, dynamic>>[],
+        'audioTracks': <Map<String, dynamic>>[],
+        'export': {'resolution': '720p', 'fps': 24},
+      };
+      final clips = [
+        ProjectClip(id: 'clip_01', path: clipPath, name: 'look_clip.mp4'),
+        ProjectClip(id: 'clip_02', path: logoPath, name: 'look_logo.png'),
+      ];
+      Future<String> render(Map<String, dynamic> j, String name) =>
+          RenderService().render(
+            plan: EditPlan.fromJson(j),
+            clips: clips,
+            resolution: '720p',
+            name: name,
+          );
+
+      final plain = await render(base(), 'look_plain');
+      final graded = await render(
+        PlanOps.setGrade(base(), ColorGrade.presets['kino']),
+        'look_graded',
+      );
+      final logoOnly = await render(
+        PlanOps.setLogo(base(), 'clip_02', seconds: 2),
+        'look_logo',
+      );
+
+      // Format: 3:4 at 720p = 720x960, 24 fps, 6 s.
+      final media = (await FFprobeKit.getMediaInformation(logoOnly))
+          .getMediaInformation()!;
+      expect(double.parse(media.getDuration()!), closeTo(6.0, 0.6));
+      final video = media.getStreams().firstWhere(
+        (s) => s.getType() == 'video',
+      );
+      expect(video.getWidth(), 720);
+      expect(video.getHeight(), 960);
+      expect(video.getAverageFrameRate(), '24/1');
+
+      // Mean PSNR of [a] vs [b] over [seconds] starting at [start].
+      Future<double> psnr(
+        String a,
+        String b, {
+        required double start,
+        required double seconds,
+      }) async {
+        final s = await FFmpegKit.executeWithArguments([
+          '-ss',
+          '$start',
+          '-t',
+          '$seconds',
+          '-i',
+          a,
+          '-ss',
+          '$start',
+          '-t',
+          '$seconds',
+          '-i',
+          b,
+          '-lavfi',
+          '[0:v][1:v]psnr',
+          '-f',
+          'null',
+          '-',
+        ]);
+        final logs = await s.getAllLogsAsString() ?? '';
+        final m = RegExp(r'average:([0-9.]+|inf)').firstMatch(logs);
+        expect(m, isNotNull, reason: logs);
+        return m!.group(1) == 'inf' ? 100.0 : double.parse(m.group(1)!);
+      }
+
+      // Grade changes the picture everywhere.
+      final gradeDiff = await psnr(plain, graded, start: 0.5, seconds: 2);
+      expect(gradeDiff, lessThan(40), reason: 'grade did not change pixels');
+
+      // Logo: only the last 2 s differ from the plain render.
+      final early = await psnr(plain, logoOnly, start: 0.5, seconds: 2);
+      final late = await psnr(plain, logoOnly, start: 4.3, seconds: 1.5);
+      expect(
+        late,
+        lessThan(early - 3),
+        reason: 'logo not visible at the end (early $early, late $late)',
+      );
+    },
+  );
+
+  testWidgets('offline Kadr AI styles (kino, dinamik, iliq) render for real', (
+    tester,
+  ) async {
+    final dir = await getTemporaryDirectory();
+    final enc = Platform.isIOS ? 'h264_videotoolbox' : 'h264_mediacodec';
+    final paths = <String>[];
+    for (final (i, src) in ['testsrc2', 'smptebars'].indexed) {
+      final path = '${dir.path}/style_$i.mp4';
+      if (File(path).existsSync()) File(path).deleteSync();
+      final gen = await FFmpegKit.executeWithArguments([
+        '-y',
+        '-f',
+        'lavfi',
+        '-i',
+        '$src=size=640x360:rate=30:duration=12',
+        '-f',
+        'lavfi',
+        '-i',
+        'sine=frequency=${300 + i * 200}:duration=12',
+        '-c:v',
+        enc,
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        '-shortest',
+        path,
+      ]);
+      expect(ReturnCode.isSuccess(await gen.getReturnCode()), isTrue);
+      paths.add(path);
+    }
+    final clips = [
+      for (final (i, p) in paths.indexed)
+        ProjectClip(
+          id: 'clip_0${i + 1}',
+          path: p,
+          name: 'style_$i.mp4',
+          durationSec: 12,
+        ),
+    ];
+    final analyzer = MediaAnalyzer();
+    final facts = [for (final c in clips) await analyzer.analyze(c.id, c.path)];
+    for (final style in AutoStyle.values) {
+      final json = AutoEditor.build(
+        clips: facts,
+        targetSec: 10,
+        aspectRatio: '9:16',
+        resolution: '720p',
+        title: style.name,
+        style: style,
+      );
+      final out = await RenderService().render(
+        plan: EditPlan.fromJson(json),
+        clips: clips,
+        resolution: '720p',
+        name: 'style_${style.name}',
+      );
+      final media = (await FFprobeKit.getMediaInformation(out))
+          .getMediaInformation()!;
+      final v = media.getStreams().firstWhere((s) => s.getType() == 'video');
+      expect(v.getWidth(), 720, reason: style.name);
+      expect(v.getHeight(), 1280, reason: style.name);
+      expect(
+        double.parse(media.getDuration()!),
+        closeTo((json['durationSec'] as num).toDouble(), 0.7),
+        reason: style.name,
+      );
+    }
+  });
+
+  testWidgets('Claude eyes: real frames are extracted from a real clip', (
+    tester,
+  ) async {
+    final dir = await getTemporaryDirectory();
+    final path = '${dir.path}/eyes.mp4';
+    if (File(path).existsSync()) File(path).deleteSync();
+    final enc = Platform.isIOS ? 'h264_videotoolbox' : 'h264_mediacodec';
+    final gen = await FFmpegKit.executeWithArguments([
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      'testsrc2=size=1280x720:rate=30:duration=9',
+      '-f',
+      'lavfi',
+      '-i',
+      'sine=frequency=500:duration=9',
+      '-c:v',
+      enc,
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'aac',
+      '-shortest',
+      path,
+    ]);
+    expect(ReturnCode.isSuccess(await gen.getReturnCode()), isTrue);
+
+    late Map<String, dynamic> sent;
+    final client = MockClient((req) async {
+      sent = jsonDecode(req.body) as Map<String, dynamic>;
+      return http.Response(
+        jsonEncode({
+          'content': [
+            {'type': 'text', 'text': 'ok'},
+          ],
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+    final out = await ClaudeFrameAnalyst(ClaudeClient('k', client: client))
+        .analyzeVideo(path);
+    expect(out, contains('Measured: duration'));
+    final content =
+        ((sent['messages'] as List).single as Map)['content'] as List;
+    final images = [
+      for (final b in content)
+        if ((b as Map)['type'] == 'image') base64Decode(b['source']['data']),
+    ];
+    expect(images.length, greaterThanOrEqualTo(3));
+    for (final jpg in images) {
+      expect(jpg[0], 0xFF); // JPEG SOI
+      expect(jpg[1], 0xD8);
+      expect(jpg.length, greaterThan(2000)); // a real picture, not empty
+    }
+    // Different moments give different pictures.
+    expect(base64Encode(images.first), isNot(base64Encode(images.last)));
   });
 }

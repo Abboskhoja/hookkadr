@@ -1,0 +1,25 @@
+name: kadr_llm
+description: Kadr AI on-device language model runtime (llama.cpp over dart:ffi).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.9.0
+  flutter: ">=3.32.0"
+
+dependencies:
+  ffi: ^2.1.0
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      ios:
+        ffiPlugin: true
+      android:
+        ffiPlugin: true

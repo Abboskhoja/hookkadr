@@ -12,6 +12,8 @@ import 'export_presets.dart';
       return (width: short, height: short);
     case '4:5':
       return (width: short, height: (short * 5 / 4).round() ~/ 2 * 2);
+    case '3:4':
+      return (width: short, height: (short * 4 / 3).round() ~/ 2 * 2);
     default: // 9:16
       return (width: short, height: (short * 16 / 9).round() ~/ 2 * 2);
   }
@@ -43,11 +45,12 @@ RenderArgs buildRenderArgs({
   required String outputPath,
   required String videoEncoder,
   required String resolution,
+  double? musicDurationSec,
 }) {
   final size = outputSize(plan.aspectRatio, resolution);
   final w = size.width;
   final h = size.height;
-  const fps = 30;
+  final fps = plan.export.fps;
 
   final usedClipIds = <String>[];
   for (final s in plan.shots) {
@@ -70,6 +73,17 @@ RenderArgs buildRenderArgs({
     args
       ..add('-i')
       ..add(c.path);
+  }
+
+  // Logo end card: an extra still-image input placed after the clips.
+  final logo = plan.logo;
+  final logoClip = logo == null
+      ? null
+      : clips.where((c) => c.id == logo.clipId && c.isImage).firstOrNull;
+  int? logoIdx;
+  if (logoClip != null) {
+    logoIdx = usedClipIds.length;
+    args.addAll(['-loop', '1', '-framerate', '$fps', '-i', logoClip.path]);
   }
 
   final textFiles = <String, String>{};
@@ -196,7 +210,12 @@ RenderArgs buildRenderArgs({
     }
     acc = out;
   }
-  f.write('[$acc]null[vc];');
+  final grade = plan.grade;
+  f.write(
+    grade == null || grade.isNeutral
+        ? '[$acc]null[vc];'
+        : '[$acc]${gradeFilter(grade)}[vc];',
+  );
   f.write('${audioInputs}concat=n=${shots.length}:v=0:a=1[ac]');
 
   // Music layer: looped, trimmed to the video, faded out, and ducked under
@@ -204,12 +223,27 @@ RenderArgs buildRenderArgs({
   var audioOut = 'ac';
   final music = plan.music;
   if (music != null) {
-    final mi = usedClipIds.length;
-    args.addAll(['-stream_loop', '-1', '-i', music.path]);
+    final mi = usedClipIds.length + (logoIdx == null ? 0 : 1);
     final total = plan.durationSec;
+    // No -stream_loop: in FFmpeg 7/8 a loop that restarts after the output
+    // has finished deadlocks in cleanup (seen on iOS: the MP4 is written but
+    // the render never returns). A short song is repeated as extra inputs
+    // and joined instead; each copy simply ends.
+    final needed = music.offsetSec + total;
+    final songSec = musicDurationSec;
+    final copies = songSec == null || songSec <= 0 || songSec >= needed - 0.01
+        ? 1
+        : (needed / songSec).ceil();
+    for (var k = 0; k < copies; k++) {
+      args.addAll(['-i', music.path]);
+    }
+    final song = copies == 1
+        ? '[$mi:a]'
+        : '${[for (var k = 0; k < copies; k++) '[${mi + k}:a]'].join()}'
+              'concat=n=$copies:v=0:a=1,';
     final fade = music.fadeOutSec.clamp(0.0, total).toDouble();
     f.write(
-      ';[$mi:a]atrim=start=${music.offsetSec.toStringAsFixed(3)}:duration=${total.toStringAsFixed(3)},'
+      ';${song}atrim=start=${music.offsetSec.toStringAsFixed(3)}:duration=${total.toStringAsFixed(3)},'
       'asetpts=PTS-STARTPTS,aresample=44100,aformat=channel_layouts=stereo,'
       'volume=${music.volume.toStringAsFixed(2)}'
       '${music.fadeInSec > 0 ? ',afade=t=in:st=0:d=${music.fadeInSec.clamp(0.0, total).toStringAsFixed(3)}' : ''}'
@@ -225,6 +259,20 @@ RenderArgs buildRenderArgs({
   }
 
   var last = 'vc';
+  if (logo != null && logoIdx != null) {
+    final start = (plan.durationSec - logo.durationSec).clamp(0.0, 1e6);
+    final fade = logo.fadeSec > 0
+        ? ',fade=t=in:st=0:d=${n3(logo.fadeSec)}:alpha=1'
+        : '';
+    f.write(
+      ';[$logoIdx:v]format=rgba,scale=${(w * logo.scale).round() ~/ 2 * 2}:-2'
+      '$fade,trim=duration=${n3(logo.durationSec)},'
+      'setpts=PTS-STARTPTS+${n3(start)}/TB[logo]'
+      ";[$last][logo]overlay=x=(W-w)/2:y=(H-h)/2:format=auto:"
+      "enable='between(t,${n3(start)},${n3(plan.durationSec)})'[vlogo]",
+    );
+    last = 'vlogo';
+  }
   for (final (i, c) in plan.captions.indexed) {
     final out = 'vcap$i';
     f.write(
@@ -261,6 +309,28 @@ RenderArgs buildRenderArgs({
     totalSec: plan.durationSec,
     textFiles: textFiles,
   );
+}
+
+/// Colour look as one LGPL-only filter chain: exposure + contrast on luma
+/// (`lutyuv`), saturation (`hue`), warm/cool balance (`colorbalance`).
+String gradeFilter(ColorGrade g) {
+  String n(double v) => v.toStringAsFixed(3);
+  final parts = <String>[];
+  if (g.exposure != 0 || g.contrast != 1) {
+    parts.add(
+      "lutyuv=y='clip((val-128)*${n(g.contrast)}+128+${n(g.exposure * 100)},16,235)'",
+    );
+  }
+  if (g.saturation != 1) parts.add('hue=s=${n(g.saturation)}');
+  if (g.temperature != 0) {
+    final t = g.temperature;
+    parts.add(
+      'colorbalance=rs=${n(0.12 * t)}:bs=${n(-0.12 * t)}:'
+      'rm=${n(0.2 * t)}:bm=${n(-0.2 * t)}:'
+      'rh=${n(0.1 * t)}:bh=${n(-0.1 * t)}',
+    );
+  }
+  return parts.join(',');
 }
 
 /// FFmpeg `xfade` transition names.

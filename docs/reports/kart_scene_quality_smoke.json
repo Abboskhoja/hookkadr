@@ -1,0 +1,45 @@
+{
+  "source": "data/sources/commons/39647148.jpg",
+  "httpStatus": 200,
+  "fixture": "existing local Commons source; real production weights",
+  "result": {
+    "model": {
+      "name": "scene_quality",
+      "version": "1.0.0"
+    },
+    "frames": [
+      {
+        "timeSec": 0.0,
+        "quality": 0.6397,
+        "defects": {
+          "blurry": 0.0015,
+          "dark": 0.0001,
+          "overexposed": 0.0158,
+          "noisy": 0.6681,
+          "low_contrast": 0.0001
+        },
+        "flags": [
+          "noisy"
+        ]
+      }
+    ],
+    "summary": {
+      "frames": 1,
+      "meanQuality": 0.6397,
+      "worst": {
+        "timeSec": 0.0,
+        "quality": 0.6397,
+        "flags": [
+          "noisy"
+        ]
+      },
+      "flaggedShare": {
+        "blurry": 0.0,
+        "dark": 0.0,
+        "overexposed": 0.0,
+        "noisy": 1.0,
+        "low_contrast": 0.0
+      }
+    }
+  }
+}

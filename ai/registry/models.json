@@ -1,0 +1,45 @@
+{
+  "models": {
+    "scene_quality": {
+      "production": "1.0.0",
+      "versions": [
+        {
+          "version": "1.0.0",
+          "status": "production",
+          "artifact": "registry/artifacts/scene_quality/1.0.0",
+          "sha256": "086530f053e9049228130e83fc2f4d07663ee29426a695ad6c9ce476910d1ba1",
+          "run": "scene_quality/20261014-030042",
+          "dataset": "scene_quality_synth_v1",
+          "datasetSha256": "45534512ebad3c2587c363d100e03f50d21ce6fabe6511fd3a3c36fed072a7ee",
+          "metrics": {
+            "test": {
+              "macroAuc": 0.9829646639049617,
+              "macroF1": 0.8615206361231221,
+              "qualitySpearman": 0.8231791478027671
+            },
+            "baselineTest": {
+              "macroAuc": 0.9428520330353825,
+              "macroF1": 0.7322669135818629
+            }
+          },
+          "registeredAt": "2026-10-14T03:00:58+0500",
+          "gate": [
+            {
+              "check": "beats rule baseline (test macro AUC gain)",
+              "value": 0.0401,
+              "required": ">= 0.02",
+              "ok": true
+            },
+            {
+              "check": "quality ranking (test Spearman)",
+              "value": 0.8232,
+              "required": ">= 0.7",
+              "ok": true
+            }
+          ],
+          "promotedAt": "2026-10-14T03:00:59+0500"
+        }
+      ]
+    }
+  }
+}

@@ -54,17 +54,17 @@ class Shot {
     if (motion == null) {
       throw EditPlanFormatException('Unknown motion: ${j['motion']}');
     }
-    final speed = (j['speed'] as num?)?.toDouble() ?? 1.0;
+    final speed = _optionalNum(j, 'speed') ?? 1.0;
     if (speed < kMinSpeed || speed > kMaxSpeed) {
       throw EditPlanFormatException(
         'Shot ${j['id']} speed must be $kMinSpeed..$kMaxSpeed',
       );
     }
-    final volume = (j['volume'] as num?)?.toDouble() ?? 1.0;
+    final volume = _optionalNum(j, 'volume') ?? 1.0;
     if (volume < 0 || volume > 2) {
       throw EditPlanFormatException('Shot ${j['id']} volume must be 0..2');
     }
-    final tSec = (j['transitionSec'] as num?)?.toDouble() ?? 0.4;
+    final tSec = _optionalNum(j, 'transitionSec') ?? 0.4;
     if (tSec < 0.1 || tSec > 2) {
       throw EditPlanFormatException(
         'Shot ${j['id']} transitionSec must be 0.1..2',
@@ -88,14 +88,14 @@ class Shot {
     transitionIn: j['transitionIn'] as String?,
     mediaSlotId: j['mediaSlotId'] as String?,
     sourceClipId: j['sourceClipId'] as String?,
-    sourceIn: (j['sourceIn'] as num?)?.toDouble(),
-    sourceOut: (j['sourceOut'] as num?)?.toDouble(),
+    sourceIn: _optionalNum(j, 'sourceIn'),
+    sourceOut: _optionalNum(j, 'sourceOut'),
     transition: transition,
     transitionSec: transitionSec,
     speed: speed,
     motion: motion,
     freeze: j['freeze'] as bool? ?? false,
-    volume: (j['volume'] as num?)?.toDouble() ?? 1.0,
+    volume: _optionalNum(j, 'volume') ?? 1.0,
   );
 
   final String id;
@@ -147,7 +147,7 @@ class MediaSlot {
       id: _str(j, 'id'),
       kind: kind,
       description: _str(j, 'description'),
-      requiredDurationSec: (j['requiredDurationSec'] as num?)?.toDouble(),
+      requiredDurationSec: _optionalNum(j, 'requiredDurationSec'),
     );
   }
 
@@ -199,10 +199,13 @@ class AudioTrack {
 class ExportOptions {
   const ExportOptions({required this.resolution, required this.fps});
 
-  factory ExportOptions.fromJson(Map<String, dynamic> j) => ExportOptions(
-    resolution: _str(j, 'resolution'),
-    fps: _num(j, 'fps').toInt(),
-  );
+  factory ExportOptions.fromJson(Map<String, dynamic> j) {
+    final fps = _num(j, 'fps');
+    if (fps != fps.roundToDouble()) {
+      throw const EditPlanFormatException('fps must be a whole number');
+    }
+    return ExportOptions(resolution: _str(j, 'resolution'), fps: fps.toInt());
+  }
 
   final String resolution;
   final int fps;
@@ -225,19 +228,19 @@ class MusicTrack {
     final m = MusicTrack(
       path: _str(j, 'path'),
       name: _str(j, 'name'),
-      volume: (j['volume'] as num?)?.toDouble() ?? 0.35,
-      offsetSec: (j['offsetSec'] as num?)?.toDouble() ?? 0,
-      fadeOutSec: (j['fadeOutSec'] as num?)?.toDouble() ?? 1.5,
-      fadeInSec: (j['fadeInSec'] as num?)?.toDouble() ?? 0,
+      volume: _optionalNum(j, 'volume') ?? 0.35,
+      offsetSec: _optionalNum(j, 'offsetSec') ?? 0,
+      fadeOutSec: _optionalNum(j, 'fadeOutSec') ?? 1.5,
+      fadeInSec: _optionalNum(j, 'fadeInSec') ?? 0,
       beats: [
         for (final b in (j['beats'] as List? ?? const []))
-          (b as num).toDouble(),
+          _finiteNum(b, 'music.beats'),
       ],
     );
     if (m.volume < 0 || m.volume > 1) {
       throw const EditPlanFormatException('music.volume must be 0..1');
     }
-    if (m.offsetSec < 0 || m.fadeOutSec < 0) {
+    if (m.offsetSec < 0 || m.fadeOutSec < 0 || m.fadeInSec < 0) {
       throw const EditPlanFormatException('music offset/fade must be >= 0');
     }
     return m;
@@ -261,6 +264,119 @@ class MusicTrack {
   final List<double> peaks;
 }
 
+/// Global look: one grade applied to the whole timeline. Rendered with
+/// LGPL-safe filters only (`lutyuv`, `hue`, `colorbalance`).
+class ColorGrade {
+  const ColorGrade({
+    this.exposure = 0,
+    this.contrast = 1,
+    this.saturation = 1,
+    this.temperature = 0,
+  });
+
+  factory ColorGrade.fromJson(Map<String, dynamic> j) {
+    final g = ColorGrade(
+      exposure: _optionalNum(j, 'exposure') ?? 0,
+      contrast: _optionalNum(j, 'contrast') ?? 1,
+      saturation: _optionalNum(j, 'saturation') ?? 1,
+      temperature: _optionalNum(j, 'temperature') ?? 0,
+    );
+    if (g.exposure < -0.5 || g.exposure > 0.5) {
+      throw const EditPlanFormatException('grade.exposure must be -0.5..0.5');
+    }
+    if (g.contrast < 0.5 || g.contrast > 2) {
+      throw const EditPlanFormatException('grade.contrast must be 0.5..2');
+    }
+    if (g.saturation < 0 || g.saturation > 2.5) {
+      throw const EditPlanFormatException('grade.saturation must be 0..2.5');
+    }
+    if (g.temperature < -1 || g.temperature > 1) {
+      throw const EditPlanFormatException('grade.temperature must be -1..1');
+    }
+    return g;
+  }
+
+  /// -0.5..0.5 (0 = unchanged).
+  final double exposure;
+
+  /// 0.5..2 (1 = unchanged).
+  final double contrast;
+
+  /// 0..2.5 (1 = unchanged, 0 = black & white).
+  final double saturation;
+
+  /// -1 (cool) .. 1 (warm).
+  final double temperature;
+
+  bool get isNeutral =>
+      exposure == 0 && contrast == 1 && saturation == 1 && temperature == 0;
+
+  Map<String, dynamic> toJson() => {
+    'exposure': exposure,
+    'contrast': contrast,
+    'saturation': saturation,
+    'temperature': temperature,
+  };
+
+  /// Named looks offered in the editor.
+  static const presets = <String, ColorGrade>{
+    'kino': ColorGrade(
+      exposure: -0.03,
+      contrast: 1.15,
+      saturation: 0.9,
+      temperature: 0.2,
+    ),
+    'iliq': ColorGrade(exposure: 0.03, saturation: 1.1, temperature: 0.35),
+    'sovuq': ColorGrade(contrast: 1.05, saturation: 0.95, temperature: -0.3),
+    'jonli': ColorGrade(contrast: 1.1, saturation: 1.35),
+  };
+}
+
+/// Brand logo shown over the last [durationSec] of the video. [clipId] must
+/// be an image in the project's clips.
+class LogoEndCard {
+  const LogoEndCard({
+    required this.clipId,
+    this.durationSec = 2,
+    this.scale = 0.3,
+    this.fadeSec = 0.4,
+  });
+
+  factory LogoEndCard.fromJson(Map<String, dynamic> j) {
+    final l = LogoEndCard(
+      clipId: _str(j, 'clipId'),
+      durationSec: _optionalNum(j, 'durationSec') ?? 2,
+      scale: _optionalNum(j, 'scale') ?? 0.3,
+      fadeSec: _optionalNum(j, 'fadeSec') ?? 0.4,
+    );
+    if (l.durationSec < 0.5 || l.durationSec > 5) {
+      throw const EditPlanFormatException('logo.durationSec must be 0.5..5');
+    }
+    if (l.scale < 0.1 || l.scale > 0.8) {
+      throw const EditPlanFormatException('logo.scale must be 0.1..0.8');
+    }
+    if (l.fadeSec < 0 || l.fadeSec > l.durationSec) {
+      throw const EditPlanFormatException('logo.fadeSec must be 0..duration');
+    }
+    return l;
+  }
+
+  final String clipId;
+
+  /// Seconds before the end of the video when the logo is on screen.
+  final double durationSec;
+
+  /// Logo width as a fraction of the video width.
+  final double scale;
+  final double fadeSec;
+}
+
+/// Frame rates the render pipeline supports.
+const kSupportedFps = [24, 25, 30, 60];
+
+/// Aspect ratios the render pipeline supports.
+const kAspectRatios = ['9:16', '16:9', '1:1', '4:5', '3:4'];
+
 class EditPlan {
   const EditPlan({
     required this.title,
@@ -273,6 +389,8 @@ class EditPlan {
     required this.audioTracks,
     required this.export,
     this.music,
+    this.grade,
+    this.logo,
   });
 
   /// Parses and validates. Throws [EditPlanFormatException] on any violation.
@@ -295,6 +413,12 @@ class EditPlan {
         music: j['music'] == null
             ? null
             : MusicTrack.fromJson(j['music'] as Map<String, dynamic>),
+        grade: j['grade'] == null
+            ? null
+            : ColorGrade.fromJson(j['grade'] as Map<String, dynamic>),
+        logo: j['logo'] == null
+            ? null
+            : LogoEndCard.fromJson(j['logo'] as Map<String, dynamic>),
       );
       plan._validate();
       return plan;
@@ -316,14 +440,26 @@ class EditPlan {
   final ExportOptions export;
   final MusicTrack? music;
 
+  /// Optional whole-video colour look (null = untouched colours).
+  final ColorGrade? grade;
+
+  /// Optional logo end card (null = none).
+  final LogoEndCard? logo;
+
   static const _eps = 0.05;
 
   void _validate() {
     if (durationSec <= 0) {
       throw const EditPlanFormatException('durationSec <= 0');
     }
-    if (!const {'9:16', '16:9', '1:1', '4:5'}.contains(aspectRatio)) {
+    if (!kAspectRatios.contains(aspectRatio)) {
       throw EditPlanFormatException('Bad aspectRatio: $aspectRatio');
+    }
+    if (!kSupportedFps.contains(export.fps)) {
+      throw EditPlanFormatException('Unsupported fps: ${export.fps}');
+    }
+    if (logo != null && logo!.durationSec > durationSec) {
+      throw const EditPlanFormatException('logo is longer than the video');
     }
     if (shots.isEmpty) throw const EditPlanFormatException('No shots');
 
@@ -334,8 +470,10 @@ class EditPlan {
       }
     }
     final shotIds = <String>{};
-    final sorted = [...shots]..sort((a, b) => a.startSec.compareTo(b.startSec));
-    for (final (i, s) in sorted.indexed) {
+    // The renderer concatenates this exact array. Accepting a sorted copy
+    // here would validate a different timeline from the one being exported.
+    var cursor = 0.0;
+    for (final s in shots) {
       if (!shotIds.add(s.id)) {
         throw EditPlanFormatException('Duplicate shot id: ${s.id}');
       }
@@ -345,9 +483,12 @@ class EditPlan {
       if (s.endSec > durationSec + _eps) {
         throw EditPlanFormatException('Shot ${s.id} exceeds duration');
       }
-      if (i > 0 && s.startSec < sorted[i - 1].endSec - _eps) {
-        throw EditPlanFormatException('Shot ${s.id} overlaps previous shot');
+      if ((s.startSec - cursor).abs() > _eps) {
+        throw EditPlanFormatException(
+          'Shot ${s.id} must continue the ordered timeline at $cursor',
+        );
       }
+      cursor = s.endSec;
       if ((s.sourceIn != null || s.sourceOut != null) &&
           (s.sourceIn == null ||
               s.sourceOut == null ||
@@ -360,6 +501,9 @@ class EditPlan {
           'Shot ${s.id} references unknown slot ${s.mediaSlotId}',
         );
       }
+    }
+    if ((cursor - durationSec).abs() > _eps) {
+      throw const EditPlanFormatException('Shots must cover durationSec');
     }
     for (final c in captions) {
       if (c.startSec < 0 ||
@@ -387,9 +531,19 @@ String _str(Map<String, dynamic> j, String k) {
 }
 
 double _num(Map<String, dynamic> j, String k) {
-  final v = j[k];
-  if (v is! num) throw EditPlanFormatException('Missing or invalid "$k"');
-  return v.toDouble();
+  return _finiteNum(j[k], k);
+}
+
+double? _optionalNum(Map<String, dynamic> j, String k) =>
+    j[k] == null ? null : _finiteNum(j[k], k);
+
+double _finiteNum(Object? value, String key) {
+  if (value is! num || !value.toDouble().isFinite) {
+    throw EditPlanFormatException(
+      'Missing or invalid "$key": finite number required',
+    );
+  }
+  return value.toDouble();
 }
 
 List<T> _list<T>(

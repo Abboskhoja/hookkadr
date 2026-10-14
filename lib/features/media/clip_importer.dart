@@ -46,8 +46,18 @@ class ClipImporter {
     return _import(files.take(limit).toList());
   }
 
-  Future<List<ImportedClip>> pickImages({int limit = 10}) async {
-    final files = await ImagePicker().pickMultiImage(limit: limit);
+  /// [maxSide] makes the picker re-encode to JPEG (HEIC photos and EXIF
+  /// rotation become plain, upright JPEGs the renderer reads everywhere).
+  Future<List<ImportedClip>> pickImages({
+    int limit = 10,
+    double? maxSide,
+  }) async {
+    final files = await ImagePicker().pickMultiImage(
+      limit: limit,
+      maxWidth: maxSide,
+      maxHeight: maxSide,
+      imageQuality: maxSide == null ? null : 92,
+    );
     return _import(files.take(limit).toList());
   }
 

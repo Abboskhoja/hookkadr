@@ -238,7 +238,8 @@ Splash → (birinchi marta) Onboarding: "Qaysi AI bilan ishlaymiz?"
 - Timeline: o'lchagich, video/subtitr/audio qatorlari, playhead.
 - Inspector: kadr davomiyligi ±0.5 s (ripple), o'chirish.
 - Pastda: Materiallar, AI Edit (chat orqali tahrir).
-- REJADA: split, speed, crop/rotate, overlay, musiqa qatori, rang, keyframe.
+- Ko'rinish (🎨): rang uslubi (Kino/Iliq/Sovuq/Jonli + 4 slayder), format (9:16, 16:9, 1:1, 4:5, 3:4), oxirida logotip.
+- REJADA: crop/rotate, overlay, keyframe, LUT, preview'da rang.
 
 ### 4.3 Export sheet — HOZIR ISHLAYDI
 720p / 1080p / 4K tanlash → haqiqiy progress (FFmpeg statistikasi) →
@@ -757,3 +758,152 @@ tablet ikki ustunli layout, Riverpod/go_router migratsiyasi, backend.
 - Android build tuzatildi: `video_thumbnail` (jcenter, Gradle 9 da yiqilardi) olib tashlandi,
   thumbnail'lar FFmpeg bilan.
 - Testlar: 98 unit/widget, 7 simulyator integration. iOS va Android debug build'lari yig'iladi.
+
+### 2026-10-13 — Ko'rinish: rang uslubi, logotip, 3:4 va FPS
+- **Audit**: `flutter analyze` 0 muammo, 98 unit/widget test yashil (bazaviy holat). Asosiy vertical slice
+  (import → timeline → preview → MP4) oldindan ishlagan; bu qadam prompt'dagi bo'shliqlarni yopdi.
+- **Sxema** (v1 ichida, ixtiyoriy maydonlar): `grade` {exposure, contrast, saturation, temperature},
+  `logo` {clipId, durationSec, scale, fadeSec}; `aspectRatio` ga `3:4`; `export.fps` ∈ {24, 25, 30, 60}
+  (avval qattiq 30 edi, endi renderda haqiqatan ishlatiladi).
+- **Render**: rang `lutyuv` + `hue` + `colorbalance` (hammasi LGPL; `eq` filtri GPL, shuning uchun
+  ishlatilmaydi). Logotip — qo'shimcha rasm input, `fade alpha` + `overlay enable=between(t,…)`.
+  Logo rasm bo'lmasa yoki klip topilmasa jim e'tiborsiz qoldiriladi, boshqa kadrga xato bog'lanmaydi.
+- **UI**: muharrirda 🎨 "Ko'rinish" paneli; Export'da FPS tanlash (60 FPS faqat ≤1080p: 4K60
+  qurilmada tekshirilmagan). Toolbar tor telefonlarda gorizontal scroll.
+- **AI**: `PlanGenerator` sxemasiga `grade` va 3:4 qo'shildi; logoni AI o'ylab topmaydi.
+- **Testlar**: +12 unit (`test/look_and_logo_test.dart`), +1 simulyator integration (iPhone 17
+  simulyatori, haqiqiy FFmpeg): 720×960, 24 FPS, rang PSNR bilan o'zgargani, logo faqat oxirgi 2 s da
+  ko'rinishi tasdiqlangan. Jami 110 unit/widget + 8 integration yashil.
+- **Cheklov**: rang va logotip preview'da emas, faqat eksportda ko'rinadi (preview — kesimlar).
+
+
+### 2026-10-13 — Studiya bosh ekrani, Kadr AI uslublari, preview = eksport
+- **Navigatsiya**: ildiz `StudioShell` — Studiya · Kadr AI (chat) · Loyihalar; qora tema standart.
+- **Studiya**: "Yangi montaj" + Reels / Reklama / YouTube / Post. Videolarni tanlash → offline
+  tahlil → `AutoEditor` → muharrir (internet, kalit va render talab qilinmaydi).
+- **AutoStyle** (`dinamik`, `kino`, `iliq`): tezlik, o'tish (fadeBlack/crossfade), harakat
+  (punchIn/slowZoom) va rang uslubi to'plami; style berilmasa eski sof-kesish xulq saqlanadi.
+- **Preview = eksport (taxminiy)**: rang `gradeColorMatrix` (ColorFilter) bilan, logotip oxirgi
+  soniyalarda fade bilan. Preview'da o'tish/harakat effektlari hali yo'q (faqat eksportda).
+- "Offline AI" nomi UI'da "Kadr AI (offline)" ga almashtirildi.
+- Testlar: 120 unit/widget, 10 simulyator integration yashil.
+
+### 2026-10-14 — Kadr AI buyruq agenti (offline, so'zga itoat qiladi)
+- **`CommandAgent`** (`lib/features/plan/command_agent.dart`): o'zbekcha buyruqni qoidalar bilan tushunib,
+  `PlanOps` orqali timeline'da haqiqatan bajaradi. Tarmoqsiz, darhol, deterministik.
+- **Qamrov**: davomiylikka sig'dirish (soniya/%/yarmi), kadr o'chirish/bo'lish/nusxa/qotirish (N-kadr,
+  oxirgi, tanlangan), tezlik (2×, sekin), o'tishlar, kamera harakati, rang (uslublar + yorug'lik/kontrast/
+  to'yinganlik/harorat qadamlari), musiqa va asl ovoz, ritmga moslash, matn (qo'shtirnoq yoki `:` dan keyin),
+  format/FPS/sifat, hook, "professional qil" makrosi, bekor qilish.
+- **Halollik**: bajarilgan ish — `done`, bajarilmagani sababi bilan — `unhandled`; hech narsa o'zgarmasa
+  "bajarildi" deyilmaydi. Yaroqsiz reja saqlanmaydi (har qadamdan keyin validatsiya).
+- **UI**: muharrirdagi AI paneli avval agentni ishlatadi (darhol qo'llanadi, "Qaytarish" bor, har buyruq
+  alohida undo); agent hech narsani tushunmasa ulangan LLM taklif beradi (eski diff/Qo'llash oqimi).
+- Testlar: +27 agent testi, +1 widget (panel → buyruq → hisobot → undo). Jami 148 unit/widget yashil.
+- **Chegara**: qoidalar o'zbek lotin yozuvida; erkin gaplar ("shuni zo'r qilib ber") LLM talab qiladi.
+
+### 2026-10-14 — Claude "ko'zlari": videoni kadrlar orqali ko'rib montaj
+- **`ClaudeFrameAnalyst`**: FFmpeg qurilmada videodan kadrlar oladi (`sampleTimes`: ochilish, har sahna
+  kesimidan keyingi kadr, tekis to'ldirish, ≤12), o'lchangan faktlar (kesimlar, pauzalar) bilan Claude'ga
+  yuboradi (`ClaudeClient.describeImages`, Messages API image bloklari). Natija `VideoAnalyst` — mavjud
+  `PlanGenerator.fromClips` o'zgarishsiz ishlaydi.
+- **Afzallik**: Gemini'ning 18 MB limiti yo'q (faqat kadrlar ketadi, asl video qurilmada qoladi).
+  Yo'nalish: HOOKKADR hisobi → Gemini → OpenRouter → Claude (kadrlar). Gemini audio ham eshitadi.
+- **Cheklov**: Claude nutq/musiqani eshitmaydi (faqat pauzalar o'lchovi); harakatni kadrlar orasidan
+  taxmin qiladi. Haqiqiy Claude API chaqiruvi kalit bilan hali sinalmagan (so'rov formati mock bilan).
+- Testlar: +8 unit, +1 simulyator integration (real klipdan haqiqiy JPEG kadrlar).
+
+### 2026-10-14 — Kadr AI Director (Dart, ilova ichida): Understand → Execute → Validate
+- **`KadrDirector`** (`lib/features/director/`): niyatni aniqlaydi (edit / review / hooks / remontage /
+  generateImage / generateVideo), kerakli vositani tanlaydi, haqiqiy rejada bajaradi, natijani
+  `EditPlan` validatsiyasi va `QualityControl` dan o'tkazadi. Bajarilmagan ish "bajarildi" deyilmaydi.
+- **`QualityControl`**: sekin ochilish, hook matni yo'qligi, tezlik, material yo'q/klip yo'q/manba
+  chegaradan chiqishi, takroriy lavha, o'qib bo'lmaydigan va ustma-ust matn, CTA yo'qligi, baland musiqa.
+  Har topilmada tuzatish buyrug'i ("Tuzat" tugmasi).
+- **`HookEngine`**: 12 uslub, kontent turiga qarab 5 ta variant (shablon, offline, raqam/va'da
+  o'ylab topmaydi); LLM yaxshilashi uchun ishonchli taglik.
+- **`CapabilityRegistry`**: qaysi provayder nimaga qodirligi (faqat adapteri bor narsalar), ulangan
+  bo'yicha tanlov; narxlar saqlanmaydi (tarifga bog'liq). Ulanmagan imkoniyat "bor" deb ko'rsatilmaydi.
+- **UI**: muharrirdagi Kadr AI paneli Director orqali ishlaydi; "Sifatni tekshir", "Hook variantlarini
+  ber", "Qaytadan montaj qil 15 soniya kino uslubida"; kiritish maydoni natijalar tepasida, panel skroll.
+- **Hali yo'q (to'siq: provayder kalitlari/backend)**: rasm→video, AI video generatsiya zanjiri, nutqni
+  matnga (STT), server queue/job tizimi; ular `CapabilityRegistry` da ochiq "ulanmagan" deb turadi.
+- Testlar: +27 director, +1 widget (sifat tekshiruvi + "Tuzat"); jami 181 unit/widget yashil.
+
+### 2026-10-14 — Oddiy odam uchun UI: Kadr AI bosh ekran, Pro rejim
+- **Navigatsiya**: ikki tab — **Kadr AI** · **Loyihalarim** (`lib/features/home/home_shell.dart`). Eski "Studiya"
+  tabi va birinchi ochilishdagi "Qaysi AI bilan ishlaymiz?" oynasi olib tashlandi.
+- **Kadr AI bosh ekran**: "Salom! Men Kadr AI" + 4 katta tanlov — Video yaratish, Rasm yaratish, Montaj qilish,
+  Savol berish — va misol tugmalari. Tanlov yozish qatoriga rejim belgisini qo'yadi va niyatni aniq belgilaydi;
+  "Montaj qilish" galereyani ochadi.
+- **Yozish qatori**: faqat `+`, matn, yuborish. Format oddiy so'z bilan: "Telefon uchun · 30 s" →
+  "Qanday bo'lsin?" oynasi (Telefon / YouTube / Kvadrat / Instagram post; 15 s / 30 s / 1 daqiqa).
+- **Pro rejim** (Profil va sozlamalar): model tanlash, aniq sifat (720p–4K), avto-render, token va AI yozgan
+  prompt, API kalitlar (AI ulanishlari), muharrirdagi texnik yozuvlar faqat shu rejimda ko'rinadi.
+- **AI ulanmagan bo'lsa**: oddiy tilda tushuntiriladi, "Kadr AI'ni yoqish" → hisob bilan kirish.
+- **Muharrir**: har asbobning nomi yozilgan (Qo'shish, Matn, Musiqa, Rang, Ritm; Bo'lish, Effekt, Nusxa…),
+  pastda "Kadr AI'ga ayting" qatori, "Eksport" o'rniga "Saqlash".
+- Testlar: 260 unit/widget yashil; simulyatorda bosh ekran va muharrir skrinshot bilan tekshirildi.
+- **To'siq (ochiq)**: oddiy foydalanuvchi uchun rasm/video/savol AI'si HOOKKADR serveri deploy qilinib, kalitlar
+  serverda bo'lgandagina kalitsiz ishlaydi. Hozircha OpenRouter hisobi bilan kirish yoki Pro rejimda API kalit.
+
+### 2026-10-14 — Kadr AI telefonda: o'z on-device runtime'imiz (internetsiz)
+- **Model tanlovi o'lchov bilan** (`ai/hookkadr_ai/llm/bench.py`, 6 matnli + 8 JSON o'zbekcha topshiriq, M2 CPU
+  4 thread): Qwen3.5-0.8B — yaroqsiz o'zbekcha (JSON 50%); Qwen3.5-2B — takroriy, zaif (JSON 88%);
+  **Gemma-4-E2B Q4_K_M** (Apache-2.0, 3.1 GB) — izchil o'zbekcha, JSON 88%, 22–27 tok/s. Kadr AI miyasi shu.
+- **O'z runtime**: `packages/kadr_llm` — llama.cpp b11429 (MIT, pin qilingan) ustida kichik C qatlami
+  (`kadr_llm.h`: load / start / next / free, UTF-8 xavfsiz oqim, GBNF grammatika, RAM o'lchovi) + Dart FFI,
+  model alohida isolate'da. iOS: `KadrLlm.xcframework` (iPhone arm64 + simulyator arm64/x86_64),
+  `tool/build_ios.sh`. Tayyor paketlar (`llm_llamacpp` iOS binary buzuq, `fllama` 23 oy eski — Gemma 4'ni
+  tanimaydi) rad etildi. Eski LiteRT `flutter_edge_ai` (simulyatorda yiqilardi) olib tashlandi.
+- **Ilovada**: model menejeri (pin qilingan revision, uzilsa davom etadi, SHA-256 tekshiruv, o'chirish, RAM
+  tekshiruvi), Gemma 4 chat formati (foydalanuvchi matnidagi maxsus tokenlar zararsizlantiriladi), Auto router
+  o'rnatilgan bo'lsa birinchi navbatda telefondagi Kadr AI'ni tanlaydi, chat javobi token-token chiqadi,
+  sozlamalarda "Kadr AI telefonda" kartasi. Offline montaj rejasi grammatika bilan o'zbekcha kadrlar
+  ro'yxatini majburiy formatda yozadi (1–4.5 s/kadr).
+- **Tekshirildi (iOS simulyator, internet taqiqlangan — HttpOverrides)**: `integration_test/kadr_ai_offline_test.dart`
+  — o'zbekcha javob 6.8 s, "videoni 15 soniyaga qisqartir" → `{intent: shorten, seconds: 15}` 2.2 s, Kadr AI'ning
+  o'z 5 ta kadridan tuzilgan 15 s reja ~13 s. Chat UI'da jonli javob skrinshot bilan ko'rildi. 272 unit/widget yashil.
+- **Hali yo'q**: haqiqiy iPhone/Android'da sinov; iPhone uchun Metal (GPU) — Xcode Metal Toolchain o'rnatilgach
+  `tool/build_ios.sh` qayta ishga tushiriladi (hozir CPU); Android `.so` (NDK yo'q); telefonda rasm/video
+  generatsiya; shaxsiylashtirish xotirasi; o'z Shot Ranker modelimiz (foydalanuvchi tanlovlari ma'lumoti kerak).
+
+### 2026-10-14 — 1-vertikal bo'lak: "Rasmlardan reklama" (internetsiz) + 5 tabli UI
+- **TDD** (avval testlar, RED → GREEN): `lib/features/product_ad/` — `domain` (AdCopy, ProductAdComposer),
+  `application` (AdCopyWriter, ProductAdService, portlar MusicMaker/OutputVerifier), `data` (MusicSynth, ad_output_check),
+  `presentation` (sozlash varag'i, natija ekrani).
+- **Kompozitsiya**: kadr-aniq hisob (30 fps), 90 BPM to'r — har kesim musiqa zarbasida; hook qisqa, CTA eng uzun;
+  Ken Burns (punchIn/slowZoom), qoradan ochilish + crossfade, "kino" rang; hook, har foto uchun afzallik, CTA matnlari.
+- **Matn**: Kadr AI telefonda, GBNF grammatika bilan aniq shakl (HOOK / FOTO×N / CTA, raqamsiz boshlanish); emoji,
+  raqamlash va kesilgan qavslar tozalanadi; Kadr AI yo'q bo'lsa — neytral shablon (UI buni aytadi).
+- **Musiqa**: FFmpeg `aevalsrc` sintezi (o'zimizniki, litsenziyasiz muammo), −18 LUFS, cho'qqi −5.4 dBFS.
+- **Render xatosi topildi va tuzatildi**: musiqa `-stream_loop -1` bilan o'qilganda FFmpeg 8 tozalash bosqichida
+  deadlock'ga tushardi (MP4 yozilardi, render qaytmasdi). Endi musiqa uzunligi o'lchanadi, qisqa trek kirish sifatida
+  takrorlanib `concat` qilinadi. Mavjud 10 render integration testi yashil.
+- **Kadr AI runtime**: isolate xatosi/chiqishi endi kutib qolish o'rniga xato sifatida qaytadi.
+- **Tekshirildi (iOS simulyator, internet taqiqlangan)**: 5 foto → 33 s'da 20.000 s, 1080×1920, 30 fps, AAC audio,
+  kadr ichida harakat o'lchandi (o'rtacha |Δ| 3.8). 301 unit/widget yashil.
+- **UI**: 5 tab — Bosh sahifa (hero + 4 tezkor tugma + oxirgi loyihalar), AI Studiya (Kadr AI chat), Loyihalar,
+  Shablonlar (5 ta haqiqiy preset), Profil. 360/390/393/412 dp da overflow testlari.
+- Audit hujjatlari: `docs/architecture/*.md`.
+
+### 2026-10-14 — Kadr AI: telefonda rasm, video va xotira (API'siz)
+
+- **Rassom** (`packages/kadr_diffusion`): stable-diffusion.cpp (master-929-3f8527a, MIT) + C shim + dart:ffi, isolate'da, progress va bekor qilish bilan. Modellar: DreamShaper 8 LCM (SD 1.5, CreativeML Open RAIL-M, 4 qadam), TAESD dekoder (MIT, ~5x tez), AnimateDiff-Lightning 4-step (CreativeML Open RAIL-M). Hammasi revision + SHA-256 bilan qotirilgan.
+- **ggml Metal xatosi topildi va tuzatildi**: GROUP_NORM batch o'lchamini (ne03) e'tiborsiz qoldirardi, shuning uchun video kadrlari Metal'da shovqin chiqardi. Patch: `packages/kadr_diffusion/tool/patches/ggml-metal-group-norm-batch.patch` (`fetch_sd.sh` avtomatik qo'llaydi). Endi Metal natijasi CPU bilan bir xil va 4 baravar tez.
+- **Miya → rassom**: rasm modeli faqat inglizcha tushunadi, shuning uchun Gemma o'zbekcha so'rovni GBNF grammatika bilan (faqat lotin harflar) inglizcha tavsifga aylantiradi; ssenariy ham grammatika bilan (`SCENE: <en> | <uz caption>`).
+- **Kadr AI video** (`KadrVideoMaker`): ssenariy → har sahna chiziladi (bir seed oilasi) → ixtiyoriy jonli harakat (kalit kadrdan img2video, 16 kadr / 6 fps = 4 zarba) → 90 BPM musiqa → EditPlan → render → tekshiruv. Tekshiruvdan o'tmagan fayl tayyor deb ko'rsatilmaydi.
+- **Xotira** (`KadrMemory`): "Eslab qol: …", uslub/format tanlovlari va 👍/👎 → yoqtirgan uslub, standart format, miya system promptiga kontekst. Profil → Kadr AI xotirasi'da ko'rish/o'chirish.
+- **Mac M2 (Metal) o'lchovlari**: 512² rasm 14 s (TAESD, flash attention), 448×768 15 s, 16 kadrli img2video 62 s; eng yuqori xotira 2,3 GB (rasm) / 2,9 GB (video). Simulyator (CPU): 448×768 rasm 69 s.
+- KadrLlm ham endi qurilmada Metal bilan build qilinadi (Metal Toolchain o'rnatildi).
+- Testlar: `test/kadr_creator_test.dart`, `test/kadr_memory_test.dart`, `integration_test/kadr_creator_test.dart` (internet bloklangan).
+
+### 2026-10-14 — Kadr AI ilova ichida + och dizayn (ko'k va och jigarrang)
+
+- **O'rnatish yo'q**: Kadr AI modellari ilova paketida bo'lishi mumkin (`tool/bundle_kadr_models.sh` SHA-256 tekshiradi → `ios/KadrModels/` → Xcode "Embed Kadr AI Models" bosqichi → `Runner.app/KadrModels`). `KadrModelManager` ularni joyida o'qiydi (nusxa yo'q). Simulyatorda tekshirildi: 6,2 GB'li ilova ochildi, "Kadr AI tayyor", hech narsa yuklanmadi.
+- **Avtomatik tayyorlanish** (paketda yo'q bo'lsa): ilova ochilganda Kadr AI o'zi tayyorlanadi — miya → rassom → harakat (telefon RAM'iga qarab), faqat Wi-Fi'da (mobil internet — foydalanuvchi bir tugma bilan ruxsat beradi). Bosh sahifada halol progress banneri. Foydalanuvchi o'chirgan paket qayta yuklanmaydi.
+- **Cheklov**: App Store ilova hajmini 4 GB bilan cheklaydi; barcha paketlar ~6,2 GB. Do'kon build'i avtomatik tayyorlanishga tayanadi (keyingi qadam: Apple Background Assets / Play Asset Delivery).
+- **Dizayn**: och mavzu asosiy; krem fon (#FAF6F0), oq kartalar, ko'k (#2563C9) amallar, och jigarrang (qum/karamel) iliqlik. Video muharriri to'q qoldi. Bosh sahifa: Kadr AI holati, ko'k gradientli "Nima yaratamiz?" + tayyor g'oya chiplari, 4 ta tez boshlash kartasi. Kontrast testlari o'tdi.
+- **Skrinshot sayohati**: `flutter drive --driver=test_driver/screenshot_driver.dart --target=integration_test/ui_tour_test.dart` → `build/screenshots/`.
+- Rassomni Q8 GGUF'ga oldindan aylantirish sinaldi: 2,13→1,80 GB, xotira 2,0→1,6 GB, lekin sekinroq (14→17 s); yuklashdagi Q8 xuddi shu xotira foydasini beradi, shuning uchun qo'shilmadi.
+

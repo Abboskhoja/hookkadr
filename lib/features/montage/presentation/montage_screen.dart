@@ -129,6 +129,7 @@ class _MontageScreenState extends State<MontageScreen> {
         ),
         planner: app.generator(onStage: (s) => setState(() => _stage = s)),
         canWatchVideo: app.canWatchVideo,
+        analystSizeLimited: app.analystHasSizeLimit,
         onStage: (s) => setState(() => _stage = s),
       );
       final render = await service.render(

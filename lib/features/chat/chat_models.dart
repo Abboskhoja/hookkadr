@@ -30,6 +30,7 @@ class Msg {
       baseSignature = null,
       approval = null,
       steps = null,
+      style = null,
       needsAi = false,
       isError = false;
 
@@ -46,6 +47,8 @@ class Msg {
     this.pendingPlan,
     this.baseSignature,
     this.approval,
+    this.style,
+    this.rating,
   }) : kind = MsgKind.ai,
        clipNames = const [],
        steps = null;
@@ -63,6 +66,7 @@ class Msg {
       text = '',
       clipNames = const [],
       projectId = null,
+      style = null,
       needsAi = false,
       isError = false;
 
@@ -93,6 +97,12 @@ class Msg {
   /// null (no proposal) | pending | applied | cancelled | conflict
   String? approval;
 
+  /// Painter style of a picture/video Kadr AI drew on the phone (rateable).
+  final String? style;
+
+  /// The user's 👍 (1) / 👎 (-1) on it; Kadr AI learns from it.
+  int? rating;
+
   Map<String, dynamic> toJson() => {
     'imagePath': imagePath,
     'tokensIn': tokensIn,
@@ -102,6 +112,8 @@ class Msg {
     'pendingPlan': pendingPlan,
     'baseSignature': baseSignature,
     'approval': approval,
+    'style': style,
+    'rating': rating,
     'kind': kind.name,
     'text': text,
     'clipNames': clipNames,
@@ -145,6 +157,8 @@ class Msg {
           pendingPlan: j['pendingPlan'] as Map<String, dynamic>?,
           baseSignature: j['baseSignature'] as String?,
           approval: j['approval'] as String?,
+          style: j['style'] as String?,
+          rating: (j['rating'] as num?)?.toInt(),
         );
     }
   }

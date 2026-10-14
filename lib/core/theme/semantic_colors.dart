@@ -5,8 +5,8 @@ import 'app_theme.dart';
 /// HOOKKADR semantic tokens on top of [AppPalette]. Screens never use raw
 /// HEX values; they read roles from here.
 ///
-/// Rules: orange = primary actions only; blue/cyan = secondary actions,
-/// focus, links. Cyan/orange/peach are never small text on white.
+/// Rules: blue = primary actions, focus, links; light brown = warmth and
+/// secondary surfaces. Sand/tan are never small text on white.
 @immutable
 class HookkadrSemanticColors extends ThemeExtension<HookkadrSemanticColors> {
   const HookkadrSemanticColors({
@@ -42,11 +42,11 @@ class HookkadrSemanticColors extends ThemeExtension<HookkadrSemanticColors> {
   final Color scrim;
 
   static final light = HookkadrSemanticColors(
-    actionPrimary: AppPalette.light.accent, // #A64B12, 5.8:1 with white
+    actionPrimary: AppPalette.light.accent, // #2563C9, 5.2:1 with white
     actionPrimaryForeground: AppPalette.light.onAccent,
-    actionSecondary: AppColors.blue, // #1673B8, 5.0:1 on white
-    borderSubtle: AppPalette.light.separator, // #CEDAE8 (decorative)
-    borderStrong: const Color(0xFF7A90A8), // 3.3:1 on white
+    actionSecondary: AppColors.brown, // #8A6442 on cream
+    borderSubtle: AppPalette.light.separator, // decorative
+    borderStrong: const Color(0xFF8A7B6B), // ≥3:1 on cream
     focusRing: AppColors.blue,
     videoStage: Colors.black,
     videoChrome: Colors.white,
@@ -56,11 +56,11 @@ class HookkadrSemanticColors extends ThemeExtension<HookkadrSemanticColors> {
   );
 
   static final dark = HookkadrSemanticColors(
-    actionPrimary: AppPalette.dark.accent, // #FFAA58, 9.2:1 with #111B27
+    actionPrimary: AppPalette.dark.accent, // #7FAAEE on #0F141B
     actionPrimaryForeground: AppPalette.dark.onAccent,
-    actionSecondary: AppColors.blueLight, // #6BC9FF
-    borderSubtle: AppPalette.dark.separator, // #35485E (decorative)
-    borderStrong: const Color(0xFF607890), // 4.6:1 on black
+    actionSecondary: AppColors.peach,
+    borderSubtle: AppPalette.dark.separator, // decorative
+    borderStrong: const Color(0xFF6F7F93), // ≥3:1 on #0F141B
     focusRing: AppColors.blueLight,
     videoStage: Colors.black,
     videoChrome: Colors.white,

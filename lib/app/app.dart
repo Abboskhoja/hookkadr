@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
-import '../features/chat/chat_screen.dart';
+import '../features/home/home_shell.dart';
 import 'app_controller.dart';
 
 class HookkadrApp extends StatelessWidget {
@@ -16,8 +16,9 @@ class HookkadrApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
-      themeMode: ThemeMode.system,
-      home: const ChatScreen(),
+      // Light and warm by default (product decision 2026-10-14).
+      themeMode: ThemeMode.light,
+      home: const HomeShell(),
     ),
   );
 }

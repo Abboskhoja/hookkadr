@@ -64,8 +64,10 @@ class MontageSettings {
     required this.aspectRatio,
     required this.resolution,
     required this.platform,
+    this.style,
   });
 
+  final AutoStyle? style;
   final int targetSec;
   final String aspectRatio;
   final String resolution;
@@ -118,6 +120,7 @@ class MontageService {
     required MontageSettings settings,
     PlanGenerator? planner,
     bool canWatchVideo = false,
+    bool analystSizeLimited = true,
     StageCallback? onStage,
   }) async {
     onStage?.call('Kliplar o‘lchanmoqda: sahnalar va pauzalar');
@@ -132,7 +135,9 @@ class MontageService {
     }
 
     final useAi =
-        planner != null && canWatchVideo && !clips.any((c) => c.tooLargeForAi);
+        planner != null &&
+        canWatchVideo &&
+        !(analystSizeLimited && clips.any((c) => c.tooLargeForAi));
     final Map<String, dynamic> plan;
     String? note;
     if (useAi) {
@@ -165,6 +170,7 @@ class MontageService {
         aspectRatio: settings.aspectRatio,
         resolution: settings.resolution,
         title: prompt.isEmpty ? 'Avto-montaj' : prompt,
+        style: settings.style,
       );
       if ((plan['shots'] as List).isEmpty) {
         throw const AiException(
@@ -174,7 +180,7 @@ class MontageService {
       if (clips.any((c) => c.note.isNotEmpty) || prompt.isNotEmpty) {
         note =
             'Eslatma: bu tezkor avto-montaj (AI’siz). Izoh va matnli ko‘rsatmalarni '
-            'hisobga olish uchun Gemini’ni ulang — u videoni ko‘rib reja tuzadi.';
+            'hisobga olish uchun Claude yoki Gemini’ni ulang — ular videoni ko‘rib reja tuzadi.';
       }
     }
     EditPlan.fromJson(plan); // throws EditPlanFormatException if invalid
@@ -222,7 +228,7 @@ class MontageService {
       resolution: resolution,
       aspectRatio: plan.aspectRatio,
       durationSec: plan.durationSec,
-      fps: 30,
+      fps: plan.export.fps,
       createdAt: _clock(),
       planSignature: planSignature(project.planJson),
     );

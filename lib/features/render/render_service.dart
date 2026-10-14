@@ -12,6 +12,7 @@ import '../analysis/domain/edit_plan.dart';
 import '../projects/project.dart';
 import '../montage/application/montage_service.dart';
 import 'render_plan.dart';
+import 'render_verification.dart';
 
 class RenderException implements Exception {
   const RenderException(this.message);
@@ -67,6 +68,12 @@ class RenderService implements VideoRenderer {
         'Musiqa fayli topilmadi. Musiqani qayta tanlang.',
       );
     }
+    double? musicSec;
+    if (music != null) {
+      final info = (await FFprobeKit.getMediaInformation(music.path))
+          .getMediaInformation();
+      musicSec = double.tryParse(info?.getDuration() ?? '');
+    }
     final font = await _fontFile();
     final audio = <String>{};
     for (final c in clips) {
@@ -92,6 +99,7 @@ class RenderService implements VideoRenderer {
       outputPath: out,
       videoEncoder: encoder,
       resolution: resolution,
+      musicDurationSec: musicSec,
     );
 
     for (final e in built.textFiles.entries) {
@@ -107,7 +115,8 @@ class RenderService implements VideoRenderer {
       (stats) {
         final t = stats.getTime() / 1000.0;
         if (built.totalSec > 0) {
-          onProgress?.call((t / built.totalSec).clamp(0.0, 1.0));
+          // Completion means the encoded artifact passed verification too.
+          onProgress?.call((t / built.totalSec).clamp(0.0, 0.99));
         }
       },
     );
@@ -127,6 +136,34 @@ class RenderService implements VideoRenderer {
     }
     if (!File(out).existsSync() || File(out).lengthSync() == 0) {
       throw const RenderException('Render fayli yaratilmadi.');
+    }
+    try {
+      final probe = (await FFprobeKit.getMediaInformation(out))
+          .getMediaInformation()
+          ?.getAllProperties();
+      if (probe == null) {
+        throw const RenderException('Eksport faylini tekshirib bo‘lmadi.');
+      }
+      final size = outputSize(plan.aspectRatio, resolution);
+      final issues = verifyRender(
+        measured: RenderMeasurements.fromProbe(probe),
+        expectedWidth: size.width,
+        expectedHeight: size.height,
+        expectedDurationSec: plan.durationSec,
+        expectedFps: plan.export.fps,
+      );
+      if (issues.isNotEmpty) {
+        throw RenderException(issues.map((i) => i.message).join(' '));
+      }
+    } catch (error) {
+      // A rejected file is never returned to callers or recorded as an export.
+      try {
+        await File(out).delete();
+      } on FileSystemException {
+        // Preserve the verification error when cleanup is unavailable.
+      }
+      if (error is RenderException) rethrow;
+      throw const RenderException('Eksport faylini tekshirib bo‘lmadi.');
     }
     onProgress?.call(1);
     return out;

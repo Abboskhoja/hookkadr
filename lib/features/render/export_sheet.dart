@@ -8,6 +8,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/theme/app_theme.dart';
 import '../analysis/domain/edit_plan.dart';
 import '../../app/app_controller.dart';
+import '../plan/plan_ops.dart';
 import '../projects/project.dart';
 import 'export_presets.dart';
 import 'render_service.dart';
@@ -36,6 +37,7 @@ class _ExportSheet extends StatefulWidget {
 class _ExportSheetState extends State<_ExportSheet> {
   final _service = RenderService();
   String _resolution = '1080p';
+  int _fps = 30;
   double _progress = 0;
   bool _running = false;
   String? _error;
@@ -50,6 +52,7 @@ class _ExportSheetState extends State<_ExportSheet> {
     _resolution = const ['360p', '720p', '1080p', '4K'].contains(r)
         ? r
         : '1080p';
+    _fps = widget.plan.export.fps;
   }
 
   @override
@@ -62,6 +65,13 @@ class _ExportSheetState extends State<_ExportSheet> {
       .where((s) => widget.project.clip(s.sourceClipId) == null)
       .length;
 
+  /// 60 FPS is offered up to 1080p only: 4K60 on the phone's hardware
+  /// encoder is not verified on real devices yet.
+  bool _fpsAllowed(int f) => f != 60 || _resolution != '4K';
+
+  EditPlan get _renderPlan =>
+      EditPlan.fromJson(PlanOps.setFormat(widget.project.planJson, fps: _fps));
+
   Future<void> _start() async {
     setState(() {
       _running = true;
@@ -70,7 +80,7 @@ class _ExportSheetState extends State<_ExportSheet> {
     });
     try {
       final out = await _service.render(
-        plan: widget.plan,
+        plan: _renderPlan,
         clips: widget.project.clips,
         resolution: _resolution,
         name: widget.project.name,
@@ -87,7 +97,7 @@ class _ExportSheetState extends State<_ExportSheet> {
             resolution: _resolution,
             aspectRatio: widget.plan.aspectRatio,
             durationSec: widget.plan.durationSec,
-            fps: 30,
+            fps: _fps,
             createdAt: DateTime.now(),
             planSignature: planSignature(widget.project.planJson),
           ),
@@ -190,7 +200,7 @@ class _ExportSheetState extends State<_ExportSheet> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '${widget.plan.aspectRatio} · $_resolution · ${widget.plan.durationSec.toStringAsFixed(0)} s · 30 FPS · '
+                  '${widget.plan.aspectRatio} · $_resolution · ${widget.plan.durationSec.toStringAsFixed(0)} s · $_fps FPS · '
                   'MP4 H.264 · ${FileSizeEstimator.formatBytes(File(_output!).lengthSync())}',
                   textAlign: TextAlign.center,
                   style: AppText.caption(context),
@@ -213,14 +223,31 @@ class _ExportSheetState extends State<_ExportSheet> {
                         selected: _resolution == r,
                         onSelected: _running
                             ? null
-                            : (_) => setState(() => _resolution = r),
+                            : (_) => setState(() {
+                                _resolution = r;
+                                if (!_fpsAllowed(_fps)) _fps = 30;
+                              }),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final f in kSupportedFps)
+                      ChoiceChip(
+                        label: Text('$f FPS'),
+                        selected: _fps == f,
+                        onSelected: _running || !_fpsAllowed(f)
+                            ? null
+                            : (_) => setState(() => _fps = f),
                       ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Text(
                   'Taxminiy hajm: ${FileSizeEstimator.estimateLabel(_resolution, widget.plan.durationSec)}'
-                  ' · ${ExportPreset.of(_resolution).uiName} · 30 FPS · MP4 H.264',
+                  ' · ${ExportPreset.of(_resolution).uiName} · $_fps FPS · MP4 H.264',
                   style: AppText.caption(context),
                 ),
                 Text(

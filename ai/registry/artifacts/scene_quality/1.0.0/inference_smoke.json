@@ -1,0 +1,123 @@
+{
+  "purpose": "Local API execution smoke test; not additional quality evaluation",
+  "sourceImage": "data/sources/commons/35922751.jpg",
+  "generatedVideo": "FFmpeg testsrc 640x360 25fps 3s",
+  "results": {
+    "still": {
+      "status": 200,
+      "result": {
+        "model": {
+          "name": "scene_quality",
+          "version": "1.0.0"
+        },
+        "frames": [
+          {
+            "timeSec": 0.0,
+            "quality": 0.8503,
+            "defects": {
+              "blurry": 0.0024,
+              "dark": 0.0002,
+              "overexposed": 0.0326,
+              "noisy": 0.0628,
+              "low_contrast": 0.0014
+            },
+            "flags": []
+          }
+        ],
+        "summary": {
+          "frames": 1,
+          "meanQuality": 0.8503,
+          "worst": {
+            "timeSec": 0.0,
+            "quality": 0.8503,
+            "flags": []
+          },
+          "flaggedShare": {
+            "blurry": 0.0,
+            "dark": 0.0,
+            "overexposed": 0.0,
+            "noisy": 0.0,
+            "low_contrast": 0.0
+          }
+        }
+      }
+    },
+    "video": {
+      "status": 200,
+      "result": {
+        "model": {
+          "name": "scene_quality",
+          "version": "1.0.0"
+        },
+        "frames": [
+          {
+            "timeSec": 0.0,
+            "quality": 0.9116,
+            "defects": {
+              "blurry": 0.0,
+              "dark": 0.0,
+              "overexposed": 0.8641,
+              "noisy": 0.0001,
+              "low_contrast": 0.0
+            },
+            "flags": [
+              "overexposed"
+            ]
+          },
+          {
+            "timeSec": 1.0,
+            "quality": 0.8937,
+            "defects": {
+              "blurry": 0.0,
+              "dark": 0.0,
+              "overexposed": 0.8911,
+              "noisy": 0.0001,
+              "low_contrast": 0.0
+            },
+            "flags": [
+              "overexposed"
+            ]
+          },
+          {
+            "timeSec": 2.0,
+            "quality": 0.897,
+            "defects": {
+              "blurry": 0.0,
+              "dark": 0.0,
+              "overexposed": 0.8909,
+              "noisy": 0.0001,
+              "low_contrast": 0.0
+            },
+            "flags": [
+              "overexposed"
+            ]
+          }
+        ],
+        "summary": {
+          "frames": 3,
+          "meanQuality": 0.9008,
+          "worst": {
+            "timeSec": 1.0,
+            "quality": 0.8937,
+            "flags": [
+              "overexposed"
+            ]
+          },
+          "flaggedShare": {
+            "blurry": 0.0,
+            "dark": 0.0,
+            "overexposed": 1.0,
+            "noisy": 0.0,
+            "low_contrast": 0.0
+          }
+        }
+      }
+    },
+    "health": {
+      "ok": true,
+      "models": {
+        "scene_quality": "1.0.0"
+      }
+    }
+  }
+}

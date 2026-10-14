@@ -23,6 +23,7 @@ class FakeAnalyzer implements ClipAnalyzer {
 class FakeRenderer implements VideoRenderer {
   EditPlan? lastPlan;
   String? lastResolution;
+  Exception? failure;
 
   @override
   Future<String> render({
@@ -34,6 +35,7 @@ class FakeRenderer implements VideoRenderer {
   }) async {
     lastPlan = plan;
     lastResolution = resolution;
+    if (failure != null) throw failure!;
     onProgress?.call(0.5);
     onProgress?.call(1);
     return '/renders/$name.mp4';
@@ -211,4 +213,43 @@ void main() {
     ).render(p.id, resolution: '720p');
     expect(info, isNull);
   });
+
+  test(
+    'render metadata preserves the requested 60 FPS instead of assuming 30',
+    () async {
+      final repo = MemoryRepository();
+      final renderer = FakeRenderer();
+      final svc = _service(FakeAnalyzer(_facts), renderer, repo);
+      final built = await svc.buildProject(
+        clips: _clips,
+        prompt: '',
+        settings: _settings,
+      );
+      (repo.byId(built.projectId)!.planJson['export'] as Map)['fps'] = 60;
+      final info = await svc.render(built.projectId, resolution: '720p');
+      expect(renderer.lastPlan!.export.fps, 60);
+      expect(info!.fps, 60);
+    },
+  );
+
+  test(
+    'failed artifact verification never replaces the previous valid render',
+    () async {
+      final repo = MemoryRepository();
+      final renderer = FakeRenderer();
+      final svc = _service(FakeAnalyzer(_facts), renderer, repo);
+      final built = await svc.buildProject(
+        clips: _clips,
+        prompt: '',
+        settings: _settings,
+      );
+      final previous = await svc.render(built.projectId, resolution: '720p');
+      renderer.failure = Exception('Encoded artifact did not match the plan');
+      await expectLater(
+        svc.render(built.projectId, resolution: '1080p'),
+        throwsA(same(renderer.failure)),
+      );
+      expect(repo.byId(built.projectId)!.lastRender, same(previous));
+    },
+  );
 }

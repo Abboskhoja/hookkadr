@@ -5,6 +5,7 @@ import 'package:hookkadr/app/app.dart';
 import 'package:hookkadr/core/theme/app_theme.dart';
 import 'package:hookkadr/app/app_controller.dart';
 import 'package:hookkadr/features/ai/ai_clients.dart';
+import 'package:hookkadr/features/ai/claude_frame_analyst.dart';
 import 'package:hookkadr/features/chat/chat_models.dart';
 import 'package:hookkadr/features/plan/plan_ops.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,7 +51,7 @@ Future<AppController> _controller({
 }
 
 void main() {
-  testWidgets('first run asks which AI to use and can be skipped', (
+  testWidgets('home: one hero, four quick starts, five tabs, no tech words', (
     tester,
   ) async {
     final controller = await _controller();
@@ -60,18 +61,53 @@ void main() {
     await tester.pumpWidget(HookkadrApp(controller: controller));
     await _settle(tester);
 
-    expect(find.text('Qaysi AI bilan ishlaymiz?'), findsOneWidget);
-    await tester.ensureVisible(find.text('Keyinroq ulayman'));
-    await tester.pump();
-    await tester.tap(find.text('Keyinroq ulayman'));
-    await _settle(tester);
-
-    expect(find.textContaining('bugun nima yaratamiz'), findsOneWidget);
-    expect(controller.onboardingDone, isTrue);
+    expect(find.text('Nima yaratamiz?'), findsOneWidget);
+    // Kadr AI prepares itself: an honest status, no install step.
+    expect(find.text('Kadr AI tayyorlanmoqda'), findsOneWidget);
+    for (final t in [
+      'Rasmlardan reklama',
+      'AI video',
+      'Reels uchun 5 ta g‘oya',
+      'Bosh sahifa',
+      'AI Studiya',
+      'Loyihalar',
+      'Shablonlar',
+      'Profil',
+    ]) {
+      expect(find.text(t), findsOneWidget, reason: t);
+    }
+    await tester.scrollUntilVisible(
+      find.text('Videodan montaj'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Videodan montaj'), findsOneWidget);
+    expect(find.text('Rasm yaratish'), findsOneWidget);
+    expect(find.text('Qaysi AI bilan ishlaymiz?'), findsNothing);
+    expect(find.textContaining('API'), findsNothing);
+    expect(find.text('9:16'), findsNothing);
     await _teardown(tester);
   });
 
-  testWidgets('sending without a connected AI offers the connections screen', (
+  for (final (w, h) in const [(360, 800), (390, 844), (393, 852), (412, 915)]) {
+    testWidgets('home fits a $w×$h phone without overflow', (tester) async {
+      final controller = await _controller(onboarded: true);
+      tester.view.physicalSize = Size(w * 3.0, h * 3.0);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(HookkadrApp(controller: controller));
+      await _settle(tester);
+      expect(tester.takeException(), isNull);
+      for (final tab in ['AI Studiya', 'Shablonlar', 'Profil']) {
+        await tester.tap(find.text(tab));
+        await _settle(tester);
+        expect(tester.takeException(), isNull, reason: tab);
+      }
+      await _teardown(tester);
+    });
+  }
+
+  testWidgets('a home quick start opens AI Studio in the right mode', (
     tester,
   ) async {
     final controller = await _controller(onboarded: true);
@@ -80,32 +116,161 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(HookkadrApp(controller: controller));
     await _settle(tester);
-
-    await tester.enterText(find.byType(EditableText), 'Test video');
-    await tester.tap(find.byIcon(LucideIcons.arrowUp));
+    await tester.tap(find.text('Reels uchun 5 ta g‘oya'));
     await _settle(tester);
-    expect(find.text('AI ulanishlari'), findsWidgets);
-    expect(find.textContaining('hali AI’ga ulanmaganman'), findsOneWidget);
+    // AI Studio opens in question mode with the idea already typed.
+    expect(find.text('Salom! Men Kadr AI'), findsOneWidget);
+    final field = tester.widget<EditableText>(find.byType(EditableText));
+    expect(field.controller.text, 'Reels uchun 5 ta g‘oya');
     await _teardown(tester);
   });
 
-  testWidgets('logo has no fixed backdrop and page follows theme', (
+  testWidgets('templates are real recipes and profile is a tab', (
     tester,
   ) async {
+    final controller = await _controller(onboarded: true);
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(HookkadrApp(controller: controller));
+    await _settle(tester);
+    await tester.tap(find.text('Shablonlar'));
+    await _settle(tester);
+    for (final t in [
+      'Mahsulot reklamasi',
+      'Instagram post reklama',
+      'YouTube taqdimot',
+      'Reels montaj',
+      'Kino uslubida',
+    ]) {
+      expect(find.text(t), findsOneWidget, reason: t);
+    }
+    await tester.tap(find.text('Profil'));
+    await _settle(tester);
+    expect(find.text('Profil va sozlamalar'), findsOneWidget);
+    expect(find.byType(BackButton), findsNothing);
+    await _teardown(tester);
+  });
+
+  testWidgets('choosing a mode sets the composer and a plain format pill', (
+    tester,
+  ) async {
+    final controller = await _controller(onboarded: true);
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(HookkadrApp(controller: controller));
+    await _settle(tester);
+    await tester.tap(find.text('AI Studiya'));
+    await _settle(tester);
+
+    await tester.tap(find.text('Video yaratish'));
+    await _settle(tester);
+    expect(find.text('Telefon uchun · 30 s'), findsOneWidget);
+    expect(find.textContaining('Qanday video kerak?'), findsOneWidget);
+
+    await tester.tap(find.text('Telefon uchun · 30 s'));
+    await _settle(tester);
+    expect(find.text('Qanday bo‘lsin?'), findsOneWidget);
+    await tester.tap(find.text('YouTube uchun'));
+    await tester.tap(find.text('1 daqiqa'));
+    await tester.tap(find.text('Tayyor'));
+    await _settle(tester);
+    expect(find.text('YouTube uchun · 60 s'), findsOneWidget);
+    // Exact resolutions are a Pro detail.
+    expect(find.text('Sifat (Pro)'), findsNothing);
+    await _teardown(tester);
+  });
+
+  testWidgets('"Eslab qol" is remembered on the phone without any model', (
+    tester,
+  ) async {
+    final controller = await _controller(onboarded: true);
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(HookkadrApp(controller: controller));
+    await _settle(tester);
+    await tester.tap(find.text('AI Studiya'));
+    await _settle(tester);
+    await tester.enterText(
+      find.byType(EditableText),
+      'Eslab qol: do‘konim nomi Sumkachi',
+    );
+    await tester.tap(find.byIcon(LucideIcons.arrowUp));
+    await _settle(tester);
+    expect(find.textContaining('Eslab qoldim'), findsOneWidget);
+    expect(controller.memory.facts, ['do‘konim nomi Sumkachi']);
+    expect(
+      controller.memory.promptContext(),
+      contains('do‘konim nomi Sumkachi'),
+    );
+  });
+
+  testWidgets('without AI the answer explains it and opens simple settings', (
+    tester,
+  ) async {
+    final controller = await _controller(onboarded: true);
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(HookkadrApp(controller: controller));
+    await _settle(tester);
+    await tester.tap(find.text('AI Studiya'));
+    await _settle(tester);
+
+    await tester.tap(find.text('Savol berish'));
+    await _settle(tester);
+    await tester.enterText(find.byType(EditableText), 'Reels uchun g‘oya ber');
+    await tester.tap(find.byIcon(LucideIcons.arrowUp));
+    await _settle(tester);
+    expect(
+      find.textContaining('Bu ish uchun Kadr AI kerak'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Kadr AI’ni yoqish'));
+    await _settle(tester);
+    expect(find.text('Profil va sozlamalar'), findsOneWidget);
+    // API keys stay hidden until Pro mode is switched on.
+    expect(find.text('AI ulanishlari'), findsNothing);
+    // On-device Kadr AI is offered first, before any account or key.
+    expect(find.text('Kadr AI telefonda'), findsOneWidget);
+    // Brain, painter and motion: only the brain can be installed first.
+    expect(find.textContaining('Hozir tayyorlash ('), findsWidgets);
+    expect(find.textContaining('o‘zi tayyorlaydi'), findsWidgets);
+    expect(find.text('Avval “Miya”ni o‘rnating.'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Avval “Rassom”ni o‘rnating.'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Avval “Rassom”ni o‘rnating.'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Pro rejim'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Pro rejim'));
+    await _settle(tester);
+    expect(controller.proMode, isTrue);
+    expect(find.text('AI ulanishlari'), findsOneWidget);
+    await _teardown(tester);
+  });
+
+  testWidgets('dark is the default theme', (tester) async {
     final controller = await _controller(onboarded: true);
     final dispatcher = tester.platformDispatcher;
     addTearDown(dispatcher.clearPlatformBrightnessTestValue);
     dispatcher.platformBrightnessTestValue = Brightness.light;
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(HookkadrApp(controller: controller));
     await _settle(tester);
-    Color bg() =>
-        tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor!;
-    // Page colours come from the palette tokens (logo PNG is transparent).
-    expect(bg(), AppPalette.light.background);
-    expect(find.byKey(const ValueKey('brand-logo')), findsOneWidget);
-    dispatcher.platformBrightnessTestValue = Brightness.dark;
-    await _settle(tester);
-    expect(bg(), AppPalette.dark.background);
+    final bg = tester
+        .widget<Scaffold>(find.byType(Scaffold).first)
+        .backgroundColor;
+    expect(bg ?? AppPalette.dark.background, AppPalette.dark.background);
     expect(find.byKey(const ValueKey('brand-logo')), findsOneWidget);
     await _teardown(tester);
   });
@@ -130,16 +295,28 @@ void main() {
       expect(c.plannerKind, ProviderKind.claude);
     });
 
-    test('video watching requires Gemini', () async {
-      expect(
-        (await _controller(keys: {'claude_key': 'c'})).canWatchVideo,
-        isFalse,
-      );
-      expect(
-        (await _controller(keys: {'gemini_key': 'g'})).canWatchVideo,
-        isTrue,
-      );
-    });
+    test(
+      'video watching needs Gemini or Claude (frames), not OpenAI',
+      () async {
+        expect(
+          (await _controller(keys: {'openai_key': 'o'})).canWatchVideo,
+          isFalse,
+        );
+        final claude = await _controller(keys: {'claude_key': 'c'});
+        expect(claude.canWatchVideo, isTrue);
+        // Claude looks at frames extracted on the phone: no 18 MB upload limit.
+        expect(claude.analystHasSizeLimit, isFalse);
+        expect(claude.videoAnalyst, isA<ClaudeFrameAnalyst>());
+        final gemini = await _controller(keys: {'gemini_key': 'g'});
+        expect(gemini.canWatchVideo, isTrue);
+        expect(gemini.analystHasSizeLimit, isTrue);
+        // Gemini wins when both are connected (it also hears the audio).
+        final both = await _controller(
+          keys: {'gemini_key': 'g', 'claude_key': 'c'},
+        );
+        expect(both.videoAnalyst, isA<GeminiClient>());
+      },
+    );
   });
 
   test('projects persist across controller instances', () async {

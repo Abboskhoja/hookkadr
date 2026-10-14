@@ -5,6 +5,7 @@ version: 1.0.0+1
 environment:
   sdk: ^3.13.5
 dependencies:
+  connectivity_plus: ^7.3.2
   crypto: ^3.0.7
   cupertino_icons: ^2.0.0
   ffmpeg_kit_flutter_new_full: ^2.5.7
@@ -12,8 +13,6 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_animate: ^4.5.2
-  flutter_edge_ai: ^2.2.0
-  flutter_edge_ai_litertlm: ^1.12.0
   flutter_secure_storage: ^11.2.0
   flutter_web_auth_2: ^5.1.0
   gal: ^2.3.3
@@ -21,6 +20,10 @@ dependencies:
   http: ^1.6.0
   http_parser: ^4.1.2
   image_picker: ^1.2.4
+  kadr_diffusion:
+    path: packages/kadr_diffusion
+  kadr_llm:
+    path: packages/kadr_llm
   lucide_icons_flutter: ^3.1.24
   path_provider: ^2.1.6
   share_plus: ^13.3.1
@@ -38,3 +41,4 @@ flutter:
   assets:
     - assets/images/launcher_icon.png
     - assets/fonts/Inter.ttf
+    - assets/models/scene_quality.json

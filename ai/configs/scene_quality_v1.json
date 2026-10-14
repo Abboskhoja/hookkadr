@@ -1,0 +1,30 @@
+{
+  "dataset": {
+    "id": "scene_quality_synth_v1",
+    "sourcesDir": "data/sources/commons",
+    "excludeTopics": ["night"],
+    "seed": 20261014,
+    "defectiveVariants": 7,
+    "jpegQuality": [70, 95],
+    "split": {"train": 0.7, "val": 0.1, "test": 0.2}
+  },
+  "model": {
+    "name": "scene_quality",
+    "version": "1.0.0",
+    "hidden": [32, 32]
+  },
+  "training": {
+    "seed": 1234,
+    "lr": 0.003,
+    "weightDecay": 0.0001,
+    "batchSize": 128,
+    "maxEpochs": 400,
+    "patience": 40,
+    "qualityLossWeight": 1.0
+  },
+  "gate": {
+    "minMacroAucGainOverBaseline": 0.02,
+    "minQualitySpearman": 0.7,
+    "maxMacroAucDropVsProduction": 0.005
+  }
+}

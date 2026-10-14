@@ -1,13 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:kadr_llm/kadr_llm.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/ai/ai_clients.dart';
+import '../features/ai/claude_frame_analyst.dart';
 import '../features/ai/hookkadr_cloud.dart';
-import '../features/ai/offline_model.dart';
+import '../features/kadr_ai/kadr_local_model.dart';
+import '../features/kadr_ai/kadr_memory.dart';
+import '../features/kadr_ai/kadr_painter.dart';
+import '../features/kadr_ai/model_catalog.dart';
+import '../features/kadr_ai/model_manager.dart';
 import '../features/ai/openrouter.dart';
 import '../features/ai/token_meter.dart';
 import '../features/ai/plan_generator.dart';
@@ -49,12 +56,46 @@ class MemoryKeyStore implements KeyStore {
       value == null || value.isEmpty ? _m.remove(key) : _m[key] = value;
 }
 
+/// Where Kadr AI stands on this phone, in one word for the UI.
+enum KadrSetupState { idle, waitingForWifi, running, ready, failed }
+
 class AppController extends ChangeNotifier implements ProjectRepository {
   AppController({
     required this.keys,
     required this.prefs,
     HookkadrCloudClient? cloud,
-  }) : cloud = cloud ?? _cloudFromEnvironment();
+    this.autoSetup = false,
+    Future<bool> Function()? unmeteredNetwork,
+    Stream<bool> Function()? unmeteredChanges,
+    int Function()? deviceRam,
+  }) : cloud = cloud ?? _cloudFromEnvironment(),
+       _unmetered = unmeteredNetwork ?? _wifiOrEthernet,
+       _unmeteredChanges = unmeteredChanges ?? _wifiOrEthernetChanges,
+       _deviceRam = deviceRam ?? kadrDeviceRamBytes;
+
+  /// Kadr AI prepares itself after launch (the app's main sets this; tests
+  /// leave it off so they never touch the network).
+  final bool autoSetup;
+  final Future<bool> Function() _unmetered;
+  final Stream<bool> Function() _unmeteredChanges;
+  final int Function() _deviceRam;
+
+  static Stream<bool> _wifiOrEthernetChanges() =>
+      Connectivity().onConnectivityChanged.map(
+        (r) =>
+            r.contains(ConnectivityResult.wifi) ||
+            r.contains(ConnectivityResult.ethernet),
+      );
+
+  static Future<bool> _wifiOrEthernet() async {
+    try {
+      final r = await Connectivity().checkConnectivity();
+      return r.contains(ConnectivityResult.wifi) ||
+          r.contains(ConnectivityResult.ethernet);
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// The HOOKKADR server account ("Cursor model"): null when the build has
   /// no server URL or the user is not signed in.
@@ -110,28 +151,274 @@ class AppController extends ChangeNotifier implements ProjectRepository {
   double? offlineProgress; // non-null while downloading
   String? offlineError;
 
+  /// Kadr AI's own on-device model packs.
+  KadrModelManager models = KadrModelManager();
+  DownloadToken? _download;
+
   Future<void> installOffline() async {
     if (offlineProgress != null) return;
     offlineError = null;
     offlineProgress = 0;
+    _download = DownloadToken();
     notifyListeners();
     try {
-      await OfflineLlm.install((p) {
-        offlineProgress = p;
-        notifyListeners();
-      });
+      await models.install(
+        KadrModelPack.brain,
+        onProgress: (p) {
+          offlineProgress = p;
+          notifyListeners();
+        },
+        token: _download,
+      );
       offlineInstalled = true;
-    } on AiException catch (e) {
+    } on ModelInstallException catch (e) {
       offlineError = e.message;
+    } catch (e) {
+      offlineError = 'Modelni o‘rnatib bo‘lmadi: $e';
     } finally {
       offlineProgress = null;
+      _download = null;
       notifyListeners();
     }
   }
 
-  Future<void> removeOffline() async {
+  void cancelOfflineInstall() => _download?.cancel();
+
+  /// Kadr AI on this phone, when its model pack is installed.
+  KadrLocalModel? get localModel =>
+      offlineInstalled ? KadrLocalModel(models) : null;
+
+  /// Checks the on-device packs without delaying app start.
+  Future<void> refreshModelState() async {
     try {
-      await OfflineLlm.uninstall();
+      var changed = false;
+      final installed = await models.isInstalled(KadrModelPack.brain);
+      if (installed != offlineInstalled) {
+        offlineInstalled = installed;
+        changed = true;
+      }
+      for (final pack in [
+        KadrModelPack.painter,
+        KadrModelPack.decoder,
+        KadrModelPack.motion,
+      ]) {
+        final has = await models.isInstalled(pack);
+        if (has != installedPacks.contains(pack.id)) {
+          has ? installedPacks.add(pack.id) : installedPacks.remove(pack.id);
+          changed = true;
+        }
+      }
+      if (changed) notifyListeners();
+    } catch (_) {
+      // No file system access (tests): stays "not installed".
+    }
+  }
+
+  /// Painter/motion packs present on the phone (ids), with download state.
+  final Set<String> installedPacks = {};
+  final Map<String, double> packProgress = {};
+  final Map<String, String> packError = {};
+  final Map<String, DownloadToken> _packDownloads = {};
+
+  bool isPackInstalled(KadrModelPack pack) => pack.role == KadrPackRole.brain
+      ? offlineInstalled
+      : installedPacks.contains(pack.id);
+
+  /// Kadr AI draws images on this phone.
+  bool get painterInstalled =>
+      installedPacks.contains(KadrModelPack.painter.id) &&
+      installedPacks.contains(KadrModelPack.decoder.id);
+
+  /// Kadr AI turns its images into moving clips on this phone.
+  bool get motionInstalled =>
+      painterInstalled && installedPacks.contains(KadrModelPack.motion.id);
+
+  Future<void> installPack(KadrModelPack pack) async {
+    await prefs.remove('kadr_skip_${pack.id}');
+    if (pack.role == KadrPackRole.brain) return installOffline();
+    if (packProgress.containsKey(pack.id)) return;
+    packError.remove(pack.id);
+    packProgress[pack.id] = 0;
+    final token = _packDownloads[pack.id] = DownloadToken();
+    notifyListeners();
+    try {
+      // The painter's small decoder (10 MB) comes with it.
+      if (pack.role == KadrPackRole.painter) {
+        if (!await models.isInstalled(KadrModelPack.decoder)) {
+          await models.install(KadrModelPack.decoder, token: token);
+        }
+        installedPacks.add(KadrModelPack.decoder.id);
+      }
+      await models.install(
+        pack,
+        onProgress: (p) {
+          packProgress[pack.id] = p;
+          notifyListeners();
+        },
+        token: token,
+      );
+      installedPacks.add(pack.id);
+    } on ModelInstallException catch (e) {
+      packError[pack.id] = e.message;
+    } catch (e) {
+      packError[pack.id] = 'Modelni o‘rnatib bo‘lmadi: $e';
+    } finally {
+      packProgress.remove(pack.id);
+      _packDownloads.remove(pack.id);
+      notifyListeners();
+    }
+  }
+
+  void cancelPackInstall(KadrModelPack pack) => pack.role == KadrPackRole.brain
+      ? cancelOfflineInstall()
+      : _packDownloads[pack.id]?.cancel();
+
+  Future<void> removePack(KadrModelPack pack) async {
+    // The user removed it on purpose: automatic setup leaves it alone.
+    await prefs.setBool('kadr_skip_${pack.id}', true);
+    if (pack.role == KadrPackRole.brain) return removeOffline();
+    KadrPainter.unload();
+    final packs = [
+      pack,
+      if (pack.role == KadrPackRole.painter) ...[
+        KadrModelPack.decoder,
+        // Motion only animates the painter's pictures.
+        KadrModelPack.motion,
+      ],
+    ];
+    for (final p in packs) {
+      try {
+        await models.remove(p);
+      } catch (_) {}
+      installedPacks.remove(p.id);
+    }
+    notifyListeners();
+  }
+
+  double? progressOf(KadrModelPack pack) =>
+      pack.role == KadrPackRole.brain ? offlineProgress : packProgress[pack.id];
+
+  String? errorOf(KadrModelPack pack) =>
+      pack.role == KadrPackRole.brain ? offlineError : packError[pack.id];
+
+  /// What Kadr AI can do on this phone right now, in plain words.
+  List<String> get onDeviceSkills => [
+    if (offlineInstalled) 'suhbat, ssenariy va montaj rejasi',
+    if (offlineInstalled && painterInstalled) 'rasm chizish va rasmli video',
+    if (offlineInstalled && motionInstalled) 'jonli harakatli video',
+  ];
+
+  // ---------------------------------------------------------- auto setup
+
+  KadrSetupState setupState = KadrSetupState.idle;
+  String? setupNote;
+  bool _setupBusy = false;
+  StreamSubscription<bool>? _waitWifi;
+
+  bool _skipped(KadrModelPack p) => prefs.getBool('kadr_skip_${p.id}') ?? false;
+
+  /// The packs this phone should have: what its memory can run.
+  List<KadrModelPack> get wantedPacks {
+    final ram = _deviceRam();
+    bool fits(KadrModelPack p) => ram <= 0 || ram >= p.minRamBytes;
+    return [
+      if (fits(KadrModelPack.brain)) KadrModelPack.brain,
+      if (fits(KadrModelPack.painter)) KadrModelPack.painter,
+      if (fits(KadrModelPack.motion)) KadrModelPack.motion,
+    ];
+  }
+
+  /// Everything Kadr AI should have on this phone is in place.
+  bool get kadrReady =>
+      wantedPacks.every((p) => isPackInstalled(p) || _skipped(p));
+
+  /// 0..1 over the bytes still being prepared, null when nothing runs.
+  double? get setupProgress {
+    if (setupState != KadrSetupState.running) return null;
+    final packs = wantedPacks.where((p) => !_skipped(p)).toList();
+    final total = packs.fold<int>(0, (a, p) => a + p.sizeBytes);
+    if (total == 0) return null;
+    var done = 0.0;
+    for (final p in packs) {
+      final prog = progressOf(p);
+      done += isPackInstalled(p) ? p.sizeBytes : (prog ?? 0) * p.sizeBytes;
+    }
+    return (done / total).clamp(0, 1).toDouble();
+  }
+
+  /// Gets Kadr AI ready without the user doing anything: brain first (chat
+  /// works soonest), then the painter, then motion. Big downloads wait for
+  /// Wi-Fi unless [allowCellular]; afterwards everything works offline.
+  Future<void> autoSetupKadrAi({bool allowCellular = false}) async {
+    if (_setupBusy) return;
+    final missing = [
+      for (final p in wantedPacks)
+        if (!isPackInstalled(p) && !_skipped(p)) p,
+    ];
+    if (missing.isEmpty) {
+      setupState = KadrSetupState.ready;
+      setupNote = null;
+      notifyListeners();
+      return;
+    }
+    if (!allowCellular &&
+        !(prefs.getBool('kadr_cellular_ok') ?? false) &&
+        !await _unmetered()) {
+      setupState = KadrSetupState.waitingForWifi;
+      setupNote = 'Wi-Fi’ga ulanganda Kadr AI o‘zi tayyorlanadi.';
+      notifyListeners();
+      _waitWifi ??= _unmeteredChanges().listen((wifi) {
+        if (!wifi) return;
+        _waitWifi?.cancel();
+        _waitWifi = null;
+        unawaited(autoSetupKadrAi());
+      });
+      return;
+    }
+    if (allowCellular) await prefs.setBool('kadr_cellular_ok', true);
+    _setupBusy = true;
+    setupState = KadrSetupState.running;
+    setupNote = null;
+    notifyListeners();
+    try {
+      for (final p in missing) {
+        await installPack(p);
+        if (!isPackInstalled(p)) {
+          setupState = KadrSetupState.failed;
+          setupNote = errorOf(p) ?? 'Kadr AI tayyorlanmadi.';
+          return;
+        }
+      }
+      setupState = KadrSetupState.ready;
+    } finally {
+      _setupBusy = false;
+      notifyListeners();
+    }
+  }
+
+  /// What Kadr AI has learned about this user (on the phone only).
+  late final KadrMemory memory = KadrMemory(prefs);
+
+  Future<void> forgetFact(String fact) async {
+    await memory.forget(fact);
+    notifyListeners();
+  }
+
+  Future<void> clearMemory() async {
+    await memory.clear();
+    notifyListeners();
+  }
+
+  /// Kadr AI's painter on this phone, when its pack is installed. Starts in
+  /// the style the user is known to like.
+  KadrPainter? get painter => painterInstalled
+      ? KadrPainter(models, style: memory.preferredStyle ?? PaintStyle.photo)
+      : null;
+
+  Future<void> removeOffline() async {
+    KadrLocalModel.unload();
+    try {
+      await models.remove(KadrModelPack.brain);
     } catch (_) {}
     offlineInstalled = false;
     if (preferred == ProviderKind.offline) await setPreferred(null);
@@ -141,7 +428,16 @@ class AppController extends ChangeNotifier implements ProjectRepository {
   bool get canWatchVideo =>
       cloud != null ||
       isConnected(ProviderKind.gemini) ||
-      isConnected(ProviderKind.openrouter);
+      isConnected(ProviderKind.openrouter) ||
+      isConnected(ProviderKind.claude);
+
+  /// Gemini/OpenRouter/HOOKKADR receive the video file (≈18 MB inline
+  /// limit); Claude only looks at frames extracted on the device.
+  bool get analystHasSizeLimit =>
+      cloud != null ||
+      isConnected(ProviderKind.gemini) ||
+      isConnected(ProviderKind.openrouter) ||
+      !isConnected(ProviderKind.claude);
 
   /// Who watches clips: HOOKKADR account first, then the user's own Gemini
   /// key, then the OpenRouter account's video model.
@@ -150,11 +446,16 @@ class AppController extends ChangeNotifier implements ProjectRepository {
     final g = _keys[ProviderKind.gemini];
     if (g != null) return GeminiClient(g);
     final o = _keys[ProviderKind.openrouter];
-    return o == null ? null : OpenRouterClient(o);
+    if (o != null) return OpenRouterClient(o);
+    final c = _keys[ProviderKind.claude];
+    return c == null ? null : ClaudeFrameAnalyst(ClaudeClient(c));
   }
 
   /// Who draws images: OpenRouter account, then Gemini, then OpenAI.
   ImageGenerator? get imageGenerator {
+    // Kadr AI's own painter first: private, free, works offline.
+    final local = painter;
+    if (local != null) return local;
     if (cloud != null) return cloud;
     final o = _keys[ProviderKind.openrouter];
     if (o != null) return OpenRouterClient(o);
@@ -181,6 +482,15 @@ class AppController extends ChangeNotifier implements ProjectRepository {
     notifyListeners();
   }
 
+  /// Pro mode shows technical controls (model choice, tokens, prompts,
+  /// API keys, exact resolutions). Off by default: the app is for everyone.
+  bool get proMode => prefs.getBool('pro_mode') ?? false;
+  Future<void> setProMode(bool on) async {
+    await prefs.setBool('pro_mode', on);
+    if (!on && preferred != null) await setPreferred(null);
+    notifyListeners();
+  }
+
   bool get onboardingDone => prefs.getBool('onboarding_done') ?? false;
   Future<void> markOnboardingDone() => prefs.setBool('onboarding_done', true);
 
@@ -193,7 +503,7 @@ class AppController extends ChangeNotifier implements ProjectRepository {
     ProviderKind.claude => ClaudeClient(_keys[k]!),
     ProviderKind.openai => OpenAiClient(_keys[k]!),
     ProviderKind.gemini => GeminiClient(_keys[k]!),
-    ProviderKind.offline => OfflineLlm(),
+    ProviderKind.offline => KadrLocalModel(models),
   };
 
   /// Router: the planner is the user's choice if connected, otherwise the
@@ -202,13 +512,14 @@ class AppController extends ChangeNotifier implements ProjectRepository {
   ProviderKind? get plannerKind {
     final p = preferred;
     if (p != null && isConnected(p)) return p;
+    // Kadr AI's own on-device model first: private, free, works offline.
     for (final k in const [
+      ProviderKind.offline,
       ProviderKind.hookkadr,
       ProviderKind.claude,
       ProviderKind.openrouter,
       ProviderKind.openai,
       ProviderKind.gemini,
-      ProviderKind.offline,
     ]) {
       if (isConnected(k)) return k;
     }
@@ -228,7 +539,10 @@ class AppController extends ChangeNotifier implements ProjectRepository {
   Future<void> load() async {
     TokenMeter.instance.attach(prefs);
     if (cloud != null) unawaited(refreshCredits());
-    offlineInstalled = await OfflineLlm.isInstalled();
+    unawaited(() async {
+      await refreshModelState();
+      if (autoSetup) await autoSetupKadrAi();
+    }());
     for (final k in ProviderKind.values) {
       if (!k.needsKey) continue;
       final v = await keys.read(k.storageKey);

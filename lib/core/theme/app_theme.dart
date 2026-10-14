@@ -3,23 +3,39 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'semantic_colors.dart';
 
-/// Colors inspired by the clapperboard logo: blue light and warm amber.
+/// Light, calm brand colours: clear blue for actions and focus, light
+/// brown (sand → caramel) for warmth. Light theme first; the video editor
+/// keeps a dark "screening room" theme so footage reads true.
 abstract final class AppColors {
-  static const brand = Color(0xFFFFAA58);
-  static const brandPressed = Color(0xFFA64B12);
-  static const peach = Color(0xFFFFD4A0);
-  static const coral = Color(0xFFFF9950);
-  static const blue = Color(0xFF1673B8);
-  static const blueLight = Color(0xFF6BC9FF);
-  static const success = Color(0xFF78B99A);
-  static const warning = Color(0xFFE4B76B);
-  static const danger = Color(0xFFE1847D);
+  static const brand = Color(0xFF2563C9); // blue, 5.2:1 on white
+  static const brandPressed = Color(0xFF1A4C9E);
+  static const blue = Color(0xFF2563C9);
+  static const blueLight = Color(0xFF7FAAEE);
+  static const sky = Color(0xFFE4EEFC);
 
-  /// Blue-to-amber lighting from the logo's play symbol.
+  /// Light browns.
+  static const cream = Color(0xFFFAF6F0);
+  static const sand = Color(0xFFEFE3D3);
+  static const peach = Color(0xFFE6D3BB); // light tan
+  static const coral = Color(0xFFB98B5E); // caramel
+  static const brown = Color(0xFF8A6442); // 5.0:1 on cream, for small text
+
+  static const success = Color(0xFF3D9A6C);
+  static const warning = Color(0xFFC88B2C);
+  static const danger = Color(0xFFCC4B42);
+
+  /// Hero / primary surfaces: blue light with a warm sand edge.
   static const brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [blue, blueLight, peach, coral],
+    colors: [Color(0xFF2563C9), Color(0xFF3F7BDA), Color(0xFF6E95D9)],
+  );
+
+  /// Soft warm cards (light brown).
+  static const warmGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF7EEE2), Color(0xFFEBDCC8)],
   );
 }
 
@@ -53,30 +69,32 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// Background of a selected icon / row.
   final Color selected;
 
+  /// Navy and dark brown; used by the video editor and dark-mode phones.
   static const dark = AppPalette(
-    background: Colors.black,
-    surface: Color(0xFF111B27),
-    surfaceRaised: Color(0xFF1C2B3C),
-    separator: Color(0xFF35485E),
-    textPrimary: Color(0xFFF6F8FC),
-    textSecondary: Color(0xFFB4C4D6),
-    accent: AppColors.brand,
-    onAccent: Color(0xFF111B27),
-    muted: Color(0xFF95A8BC),
-    selected: Color(0xFF38271C),
+    background: Color(0xFF0F141B),
+    surface: Color(0xFF19202A),
+    surfaceRaised: Color(0xFF243040),
+    separator: Color(0xFF3A4757),
+    textPrimary: Color(0xFFF5F1EA),
+    textSecondary: Color(0xFFC9BEB0),
+    accent: AppColors.blueLight,
+    onAccent: Color(0xFF0F141B),
+    muted: Color(0xFFA89D8F),
+    selected: Color(0xFF2A3546),
   );
 
+  /// Cream background, white cards, sand raised areas, blue actions.
   static const light = AppPalette(
-    background: Colors.white,
-    surface: Color(0xFFF3F7FC),
-    surfaceRaised: Color(0xFFE6EEF7),
-    separator: Color(0xFFCEDAE8),
-    textPrimary: Color(0xFF152538),
-    textSecondary: Color(0xFF50647B),
-    accent: AppColors.brandPressed,
+    background: AppColors.cream,
+    surface: Colors.white,
+    surfaceRaised: AppColors.sand,
+    separator: Color(0xFFE6DACA),
+    textPrimary: Color(0xFF1E2B3C),
+    textSecondary: Color(0xFF5E5650),
+    accent: AppColors.blue,
     onAccent: Colors.white,
-    muted: Color(0xFF536A82),
-    selected: Color(0xFFFFEAD6),
+    muted: Color(0xFF6F655C),
+    selected: AppColors.sky,
   );
 
   @override
@@ -150,7 +168,8 @@ ThemeData buildTheme(Brightness brightness) {
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: p.surface,
       surfaceTintColor: Colors.transparent,
-      indicatorColor: Colors.transparent,
+      indicatorColor: p.selected,
+      indicatorShape: const StadiumBorder(),
       height: 64,
       labelTextStyle: WidgetStateProperty.resolveWith(
         (s) => TextStyle(
@@ -172,6 +191,13 @@ ThemeData buildTheme(Brightness brightness) {
         shape: const RoundedRectangleBorder(borderRadius: radius),
         textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
       ),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: p.surface,
+      selectedColor: p.selected,
+      side: BorderSide(color: p.separator),
+      shape: const StadiumBorder(),
+      labelStyle: TextStyle(color: p.textPrimary, fontSize: 14),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
@@ -207,10 +233,10 @@ ThemeData buildTheme(Brightness brightness) {
       ),
     ),
     textTheme: GoogleFonts.interTextTheme(
-      Typography.material2021().black.apply(
-        bodyColor: p.textPrimary,
-        displayColor: p.textPrimary,
-      ),
+      (brightness == Brightness.dark
+              ? Typography.material2021().white
+              : Typography.material2021().black)
+          .apply(bodyColor: p.textPrimary, displayColor: p.textPrimary),
     ),
   );
 }

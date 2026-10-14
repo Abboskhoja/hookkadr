@@ -1,0 +1,25 @@
+name: kadr_diffusion
+description: Kadr AI on-device painter (stable-diffusion.cpp over dart:ffi) — images and AnimateDiff video.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.9.0
+  flutter: ">=3.32.0"
+
+dependencies:
+  ffi: ^2.1.0
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      ios:
+        ffiPlugin: true
+      android:
+        ffiPlugin: true

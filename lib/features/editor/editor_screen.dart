@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../app/app_controller.dart';
@@ -13,12 +15,18 @@ import '../../core/widgets/common.dart';
 import '../../core/widgets/poster.dart';
 import '../ai/ai_clients.dart';
 import '../analysis/domain/edit_plan.dart';
+import '../director/kadr_director.dart';
+import '../director/quality_control.dart';
+import '../plan/command_agent.dart';
+import '../render/media_analyzer.dart';
 import '../plan/plan_diff.dart';
 import '../plan/plan_ops.dart';
 import '../media/clip_importer.dart';
 import '../render/beat_detector.dart';
 import '../render/export_sheet.dart';
+import '../render/grade_preview.dart';
 import '../projects/project.dart';
+import '../vision/scene_quality_scanner.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
@@ -129,6 +137,37 @@ class _EditorScreenState extends State<EditorScreen> {
       if (ctl.value.isPlaying) ctl.pause();
       ctl.seekTo(desired);
     }
+  }
+
+  /// Preview colour grade (same look the export applies).
+  Widget _graded(ColorGrade? g, Widget child) => g == null || g.isNeutral
+      ? child
+      : ColorFiltered(
+          colorFilter: ColorFilter.matrix(gradeColorMatrix(g)),
+          child: child,
+        );
+
+  /// Logo end card in the preview: fades in over the last seconds.
+  List<Widget> _logoPreview(EditPlan plan, Project project) {
+    final logo = plan.logo;
+    final clip = project.clip(logo?.clipId);
+    if (logo == null || clip == null || !clip.isImage) return const [];
+    final start = plan.durationSec - logo.durationSec;
+    if (_t < start) return const [];
+    final a = logo.fadeSec <= 0
+        ? 1.0
+        : ((_t - start) / logo.fadeSec).clamp(0.0, 1.0);
+    return [
+      Center(
+        child: Opacity(
+          opacity: a,
+          child: FractionallySizedBox(
+            widthFactor: logo.scale,
+            child: Image.file(File(clip.path), fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    ];
   }
 
   void _stop() {
@@ -327,6 +366,44 @@ class _EditorScreenState extends State<EditorScreen> {
     ),
   );
 
+  void _showLook() => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => _LookSheet(
+      projectId: widget.projectId,
+      onChanged: (next) {
+        final current = AppScope.of(context).byId(widget.projectId)?.planJson;
+        if (current != null) _apply(current, next);
+      },
+      onPickLogo: _pickLogo,
+    ),
+  );
+
+  /// Imports one image and makes it the logo end card (one undoable change).
+  Future<void> _pickLogo() async {
+    final app = AppScope.of(context);
+    final project = app.byId(widget.projectId);
+    if (project == null) return;
+    final importer = ClipImporter(startIndex: _maxClipIndex(project));
+    final added = await importer.pickImages(limit: 1);
+    if (added.isEmpty || !mounted) return;
+    final c = added.first;
+    await importer.measure(c);
+    final before = project.planJson;
+    await app.addClips(project.id, [
+      ProjectClip(
+        id: c.id,
+        path: c.path,
+        name: c.name,
+        durationSec: c.durationSec,
+        sizeBytes: c.sizeBytes,
+      ),
+    ], PlanOps.setLogo(before, c.id));
+    _undo.add(before);
+    _redo.clear();
+    if (mounted) setState(() {});
+  }
+
   void _showMusic(Map<String, dynamic> json) => showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -393,10 +470,18 @@ class _EditorScreenState extends State<EditorScreen> {
     isScrollControlled: true,
     builder: (_) => _ClaudeSheet(
       projectId: widget.projectId,
-      onApplied: () {
-        _undo.add(current);
+      playheadSec: _t,
+      selectedShotId: _selected,
+      // [before] is the plan right before this change (the sheet can apply
+      // several commands in a row, each one undoable).
+      onApplied: (before) {
+        _undo.add(before);
         _redo.clear();
         if (mounted) setState(() {});
+      },
+      onUndo: () async {
+        final now = AppScope.of(context).byId(widget.projectId)?.planJson;
+        if (now != null) await _undoStep(now);
       },
     ),
   );
@@ -513,13 +598,24 @@ class _EditorScreenState extends State<EditorScreen> {
                         color: p.accent,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Text(
-                        'Eksport',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            LucideIcons.download,
+                            size: 16,
+                            color: p.onAccent,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Saqlash',
+                            style: TextStyle(
+                              color: p.onAccent,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -553,20 +649,27 @@ class _EditorScreenState extends State<EditorScreen> {
                           fit: StackFit.expand,
                           children: [
                             if (imageClip != null)
-                              Image.file(
-                                File(imageClip.path),
-                                fit: BoxFit.cover,
-                              ),
-                            if (vctl != null && vctl.value.isInitialized)
-                              FittedBox(
-                                fit: BoxFit.cover,
-                                clipBehavior: Clip.hardEdge,
-                                child: SizedBox(
-                                  width: vctl.value.size.width,
-                                  height: vctl.value.size.height,
-                                  child: VideoPlayer(vctl),
+                              _graded(
+                                plan.grade,
+                                Image.file(
+                                  File(imageClip.path),
+                                  fit: BoxFit.cover,
                                 ),
                               ),
+                            if (vctl != null && vctl.value.isInitialized)
+                              _graded(
+                                plan.grade,
+                                FittedBox(
+                                  fit: BoxFit.cover,
+                                  clipBehavior: Clip.hardEdge,
+                                  child: SizedBox(
+                                    width: vctl.value.size.width,
+                                    height: vctl.value.size.height,
+                                    child: VideoPlayer(vctl),
+                                  ),
+                                ),
+                              ),
+                            ..._logoPreview(plan, project),
                             Padding(
                               padding: const EdgeInsets.all(14),
                               child: _PreviewOverlay(
@@ -702,18 +805,19 @@ class _EditorScreenState extends State<EditorScreen> {
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  Text(
-                                    [
-                                      if (selected.camera != null)
-                                        selected.camera!,
-                                      if (selected.transitionIn != null)
-                                        selected.transitionIn!,
-                                    ].join(' · '),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppText.caption(context)
-                                        .copyWith(fontSize: 12),
-                                  ),
+                                  if (app.proMode)
+                                    Text(
+                                      [
+                                        if (selected.camera != null)
+                                          selected.camera!,
+                                        if (selected.transitionIn != null)
+                                          selected.transitionIn!,
+                                      ].join(' · '),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppText.caption(context)
+                                          .copyWith(fontSize: 12),
+                                    ),
                                 ],
                               ),
                             ),
@@ -790,53 +894,131 @@ class _EditorScreenState extends State<EditorScreen> {
                   if (next != null) _apply(json, next);
                 },
               ),
-            // Tools (icons; long-press shows the name)
+            // Kadr AI: say what to change, in your own words.
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: 'Video yoki rasm qo‘shish',
-                    onPressed: () => _addMedia(json),
-                    icon: const Icon(LucideIcons.plus, color: Colors.white),
-                  ),
-                  IconButton(
-                    tooltip: 'Matn qo‘shish',
-                    onPressed: () => _addCaption(json),
-                    icon: const Icon(LucideIcons.type, color: Colors.white),
-                  ),
-                  IconButton(
-                    tooltip: 'Musiqa',
-                    onPressed: () => _showMusic(json),
-                    icon: Icon(
-                      LucideIcons.music,
-                      color: plan.music == null ? Colors.white : p.accent,
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+              child: Material(
+                color: p.surface,
+                borderRadius: BorderRadius.circular(24),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(24),
+                  onTap: () => _showClaude(json),
+                  child: Container(
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: p.separator, width: 0.8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.sparkles, size: 18, color: p.accent),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Kadr AI’ga ayting: “15 soniyaga qisqartir”',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: p.textSecondary,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  IconButton(
-                    tooltip: 'Ritmga moslash',
-                    onPressed: plan.music == null
+                ),
+              ),
+            ),
+            // Tools, each with its name under the icon.
+            SizedBox(
+              height: 74,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                children: [
+                  _ToolButton(
+                    icon: LucideIcons.plus,
+                    label: 'Qo‘shish',
+                    onTap: () => _addMedia(json),
+                  ),
+                  _ToolButton(
+                    icon: LucideIcons.type,
+                    label: 'Matn',
+                    onTap: () => _addCaption(json),
+                  ),
+                  _ToolButton(
+                    icon: LucideIcons.music,
+                    label: 'Musiqa',
+                    active: plan.music != null,
+                    onTap: () => _showMusic(json),
+                  ),
+                  _ToolButton(
+                    icon: LucideIcons.palette,
+                    label: 'Rang',
+                    active: plan.grade != null || plan.logo != null,
+                    onTap: _showLook,
+                  ),
+                  _ToolButton(
+                    icon: LucideIcons.audioLines,
+                    label: 'Ritm',
+                    onTap: plan.music == null
                         ? null
                         : () => _beatSync(json, plan),
-                    icon: const Icon(LucideIcons.audioLines),
-                    color: Colors.white,
                   ),
-                  IconButton(
-                    tooltip: 'Materiallar',
-                    onPressed: () => _showSlots(plan),
-                    icon: const Icon(LucideIcons.layers, color: Colors.white),
-                  ),
-                  const Spacer(),
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 44),
+                  if (app.proMode)
+                    _ToolButton(
+                      icon: LucideIcons.layers,
+                      label: 'Materiallar',
+                      onTap: () => _showSlots(plan),
                     ),
-                    onPressed: () => _showClaude(json),
-                    icon: const Icon(LucideIcons.sparkles, size: 18),
-                    label: const Text('AI'),
-                  ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Icon with its name underneath, so nobody has to guess what it does.
+class _ToolButton extends StatelessWidget {
+  const _ToolButton({
+    required this.icon,
+    required this.label,
+    this.onTap,
+    this.active = false,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final color = onTap == null
+        ? p.separator
+        : active
+        ? p.accent
+        : Colors.white;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: SizedBox(
+        width: 70,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: color, fontSize: 12),
             ),
           ],
         ),
@@ -1154,9 +1336,18 @@ class _Timeline extends StatelessWidget {
 }
 
 class _ClaudeSheet extends StatefulWidget {
-  const _ClaudeSheet({required this.projectId, required this.onApplied});
+  const _ClaudeSheet({
+    required this.projectId,
+    required this.onApplied,
+    required this.onUndo,
+    this.playheadSec = 0,
+    this.selectedShotId,
+  });
   final String projectId;
-  final VoidCallback onApplied;
+  final void Function(Map<String, dynamic> before) onApplied;
+  final Future<void> Function() onUndo;
+  final double playheadSec;
+  final String? selectedShotId;
 
   @override
   State<_ClaudeSheet> createState() => _ClaudeSheetState();
@@ -1167,17 +1358,25 @@ class _ClaudeSheetState extends State<_ClaudeSheet> {
   bool _busy = false;
   String? _error;
 
-  /// AI proposal waiting for Apply/Cancel, with what it would change.
+  /// Offline agent commands run immediately; this is what they did.
+  List<String> _done = const [];
+  List<String> _unhandled = const [];
+  List<QcFinding> _findings = const [];
+
+  static const _chips = [
+    'Reklama storyboardini tuz',
+    'Professional qil',
+    'Sifatni tekshir',
+    'Hook variantlarini ber',
+    'Kino uslubini ber',
+    'Videoni 20 soniyaga qisqartir',
+    '9:16 qil',
+  ];
+
+  /// LLM proposal waiting for Apply/Cancel, with what it would change.
   Map<String, dynamic>? _proposal;
   String? _baseSignature;
   List<String> _changes = const [];
-
-  static const _ideas = [
-    'Hookni kuchliroq qil',
-    'Videoni 20% qisqartir',
-    'Subtitrlarni qisqa va zarbdor qil',
-    'Oxiriga aniq chaqiriq qo‘sh',
-  ];
 
   @override
   void dispose() {
@@ -1185,18 +1384,84 @@ class _ClaudeSheetState extends State<_ClaudeSheet> {
     super.dispose();
   }
 
+  /// Kadr AI: first the offline command agent (instant, executes for real);
+  /// only when it understood nothing, the connected LLM proposes a plan.
   Future<void> _run(String text) async {
     final app = AppScope.of(context);
-    final gen = app.generator();
     final project = app.byId(widget.projectId);
-    if (gen == null || project == null) {
-      setState(() => _error = 'Avval AI ulang (menyu → AI ulanishlari).');
+    if (project == null || text.trim().isEmpty) return;
+    final director = KadrDirector(
+      connected: {
+        for (final k in ProviderKind.values)
+          if (app.isConnected(k)) k,
+      },
+      analyzer: MediaAnalyzer(),
+      qualityAnalyzer: SceneQualityScanner(),
+    );
+    setState(() => _busy = true);
+    final rep = await director.handle(
+      text,
+      plan: project.planJson,
+      clips: project.clips,
+      playheadSec: widget.playheadSec,
+      selectedShotId: widget.selectedShotId,
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (rep.wantsUndo) {
+      await widget.onUndo();
+      if (!mounted) return;
+      setState(() {
+        _done = const ['Oxirgi o‘zgarish bekor qilindi'];
+        _unhandled = const [];
+        _findings = const [];
+        _error = null;
+      });
+      _c.clear();
       return;
     }
-    if (text.trim().isEmpty) return;
+    if (rep.changedPlan) {
+      widget.onApplied(project.planJson);
+      await app.updatePlan(project.id, rep.plan);
+      if (!mounted) return;
+      setState(() {
+        _done = rep.done;
+        _unhandled = rep.blocked;
+        _findings = rep.findings;
+        _error = null;
+      });
+      _c.clear();
+      return;
+    }
+    // Non-edit goals (review, hook list, generation…) are answered here.
+    if (rep.goal != DirectorGoal.edit || rep.handledLocally) {
+      setState(() {
+        _done = rep.done;
+        _unhandled = rep.blocked;
+        _findings = rep.findings;
+        _error = null;
+      });
+      _c.clear();
+      return;
+    }
+    final res = (unhandled: rep.blocked);
+    final gen = app.generator();
+    if (gen == null) {
+      setState(() {
+        _done = const [];
+        _unhandled = res.unhandled;
+        _error = res.unhandled.isEmpty
+            ? 'Buyruq tushunarsiz. Masalan: “${CommandAgent.examples.first}”.'
+            : 'Bajarilmadi. Murakkab so‘rovlar uchun AI ulang (Sozlamalar).';
+      });
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
+      _done = const [];
+      _unhandled = const [];
+      _findings = const [];
     });
     try {
       final updated = await gen.edit(
@@ -1228,7 +1493,7 @@ class _ClaudeSheetState extends State<_ClaudeSheet> {
       });
       return;
     }
-    widget.onApplied();
+    widget.onApplied(project.planJson);
     await app.updatePlan(project.id, plan);
     if (mounted) Navigator.of(context).pop();
   }
@@ -1241,7 +1506,9 @@ class _ClaudeSheetState extends State<_ClaudeSheet> {
       20,
       20 + MediaQuery.of(context).viewInsets.bottom,
     ),
-    child: _proposal != null ? _review(context) : _ask(context),
+    child: SingleChildScrollView(
+      child: _proposal != null ? _review(context) : _ask(context),
+    ),
   );
 
   Widget _review(BuildContext context) => Column(
@@ -1297,19 +1564,16 @@ class _ClaudeSheetState extends State<_ClaudeSheet> {
         children: [
           Icon(LucideIcons.sparkles, size: 18, color: context.palette.accent),
           const SizedBox(width: 8),
-          Text('AI montajchi', style: AppText.title(context)),
+          Text('Kadr AI', style: AppText.title(context)),
         ],
       ),
-      const SizedBox(height: 16),
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final i in _ideas)
-            ActionChip(label: Text(i), onPressed: _busy ? null : () => _run(i)),
-        ],
+      const SizedBox(height: 4),
+      Text(
+        'Buyruq bering — men timeline’da bajaraman.',
+        style: AppText.caption(context),
       ),
-      const SizedBox(height: 16),
+      const SizedBox(height: 12),
+      _storyboard(context),
       TextField(
         controller: _c,
         enabled: !_busy,
@@ -1318,7 +1582,7 @@ class _ClaudeSheetState extends State<_ClaudeSheet> {
         textInputAction: TextInputAction.send,
         onSubmitted: _run,
         decoration: const InputDecoration(
-          hintText: 'Videoda nimani o‘zgartiramiz?',
+          hintText: 'Masalan: videoni 15 soniyaga qisqartir',
         ),
       ),
       if (_error != null) ...[
@@ -1336,10 +1600,172 @@ class _ClaudeSheetState extends State<_ClaudeSheet> {
                   color: context.palette.onAccent,
                 ),
               )
-            : const Text('Taklif olish'),
+            : const Text('Bajarish'),
       ),
+      const SizedBox(height: 12),
+      if (_done.isNotEmpty ||
+          _unhandled.isNotEmpty ||
+          _findings.isNotEmpty) ...[
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: context.palette.surfaceRaised,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final d in _done)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        LucideIcons.check,
+                        size: 16,
+                        color: AppColors.success,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(d)),
+                    ],
+                  ),
+                ),
+              for (final u in _unhandled)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        LucideIcons.triangleAlert,
+                        size: 16,
+                        color: AppColors.warning,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(u)),
+                    ],
+                  ),
+                ),
+              for (final f in _findings)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        f.severity == Severity.problem
+                            ? LucideIcons.circleAlert
+                            : f.severity == Severity.warning
+                            ? LucideIcons.triangleAlert
+                            : LucideIcons.info,
+                        size: 16,
+                        color: f.severity == Severity.problem
+                            ? AppColors.danger
+                            : f.severity == Severity.warning
+                            ? AppColors.warning
+                            : context.palette.muted,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(f.message)),
+                      if (f.fix != null)
+                        TextButton(
+                          onPressed: _busy ? null : () => _run(f.fix!),
+                          child: const Text('Tuzat'),
+                        ),
+                    ],
+                  ),
+                ),
+              if (_done.isNotEmpty &&
+                  _done.first != 'Oxirgi o‘zgarish bekor qilindi')
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      await widget.onUndo();
+                      if (mounted) {
+                        setState(() {
+                          _done = const ['Oxirgi o‘zgarish bekor qilindi'];
+                          _unhandled = const [];
+                        });
+                      }
+                    },
+                    icon: const Icon(LucideIcons.undo2, size: 16),
+                    label: const Text('Qaytarish'),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final i in _chips)
+            ActionChip(label: Text(i), onPressed: _busy ? null : () => _run(i)),
+        ],
+      ),
+      const SizedBox(height: 16),
     ],
   );
+
+  Widget _storyboard(BuildContext context) {
+    final project = AppScope.of(context).byId(widget.projectId);
+    final document = project?.planJson['production'];
+    if (project == null ||
+        document is! Map<String, dynamic> ||
+        document['schema'] != 'kart.production/1') {
+      return const SizedBox.shrink();
+    }
+    final shots = document['storyboard'];
+    if (shots is! List) return const SizedBox.shrink();
+    final bare = Map<String, dynamic>.from(project.planJson)
+      ..remove('production');
+    final stale = document['planSignature'] != planSignature(bare);
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      title: Text('Storyboard · ${shots.length} kadr'),
+      subtitle: Text(
+        stale
+            ? 'Timeline o‘zgargan; bu avvalgi storyboard.'
+            : project.renderIsCurrent
+            ? 'Storyboard · joriy MP4 eksporti mavjud'
+            : 'Suratga olish rejasi · joriy MP4 eksporti yo‘q',
+      ),
+      children: [
+        for (final shot in shots.whereType<Map>())
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              '${shot['startSec']}–${shot['endSec']} s · ${shot['purpose']}',
+            ),
+            subtitle: Text(
+              '${(shot['captureDirection'] as Map?)?['composition'] ?? ''}\n'
+              '${shot['generationInstruction'] ?? ''}',
+            ),
+          ),
+        TextButton.icon(
+          onPressed: () async {
+            await Clipboard.setData(
+              ClipboardData(
+                text: const JsonEncoder.withIndent('  ').convert(document),
+              ),
+            );
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Storyboard nusxalandi')),
+              );
+            }
+          },
+          icon: const Icon(LucideIcons.copy, size: 16),
+          label: const Text('Storyboard JSON nusxalash'),
+        ),
+      ],
+    );
+  }
 }
 
 class _PreviewOverlay extends StatelessWidget {
@@ -1446,39 +1872,20 @@ class _ShotTools extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget tool(IconData icon, String name, bool enabled, VoidCallback onTap) =>
-        IconButton(
-          tooltip: name,
-          onPressed: enabled ? onTap : null,
-          icon: Icon(icon),
-          color: Colors.white,
-        );
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        _ToolButton(icon: icon, label: name, onTap: enabled ? onTap : null);
+    return SizedBox(
+      height: 74,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         children: [
-          tool(LucideIcons.scissors, 'Playhead’da kesish', canSplit, onSplit),
-          tool(
-            LucideIcons.chevronsRight,
-            'Boshidan 0.25 s kesish',
-            canTrim,
-            onTrimHead,
-          ),
+          tool(LucideIcons.scissors, 'Bo‘lish', canSplit, onSplit),
+          tool(LucideIcons.wandSparkles, 'Effekt', true, onEffects),
           tool(LucideIcons.copyPlus, 'Nusxa', true, onDuplicate),
-          tool(
-            LucideIcons.snowflake,
-            'Freeze frame (1 s)',
-            canFreeze,
-            onFreeze,
-          ),
+          tool(LucideIcons.chevronsRight, 'Boshini kes', canTrim, onTrimHead),
+          tool(LucideIcons.snowflake, 'To‘xtatish', canFreeze, onFreeze),
           tool(LucideIcons.arrowLeft, 'Chapga', canMoveLeft, onLeft),
           tool(LucideIcons.arrowRight, 'O‘ngga', canMoveRight, onRight),
-          tool(
-            LucideIcons.wandSparkles,
-            'Effekt: o‘tish, tezlik, harakat',
-            true,
-            onEffects,
-          ),
         ],
       ),
     );
@@ -1817,4 +2224,217 @@ class _WaveformPainter extends CustomPainter {
   @override
   bool shouldRepaint(_WaveformPainter old) =>
       old.peaks != peaks || old.pps != pps || old.offsetSec != offsetSec;
+}
+
+/// Whole-video look (colour grade presets + fine sliders), output format and
+/// the logo end card. Everything shown here is rendered into the MP4.
+class _LookSheet extends StatefulWidget {
+  const _LookSheet({
+    required this.projectId,
+    required this.onChanged,
+    required this.onPickLogo,
+  });
+  final String projectId;
+  final ValueChanged<Map<String, dynamic>> onChanged;
+  final Future<void> Function() onPickLogo;
+
+  @override
+  State<_LookSheet> createState() => _LookSheetState();
+}
+
+class _LookSheetState extends State<_LookSheet> {
+  ColorGrade? _grade;
+  bool _loaded = false;
+
+  static const _presetNames = {
+    'kino': 'Kino',
+    'iliq': 'Iliq',
+    'sovuq': 'Sovuq',
+    'jonli': 'Jonli',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final json = AppScope.of(context).byId(widget.projectId)?.planJson;
+    if (json == null) return const SizedBox.shrink();
+    final plan = EditPlan.fromJson(json);
+    if (!_loaded) {
+      _grade = plan.grade;
+      _loaded = true;
+    }
+    final g = _grade ?? const ColorGrade();
+    final project = AppScope.of(context).byId(widget.projectId)!;
+    final logoClip = project.clip(plan.logo?.clipId);
+
+    void setGrade(ColorGrade? next) {
+      setState(() => _grade = next);
+      widget.onChanged(PlanOps.setGrade(json, next));
+    }
+
+    Widget slider(
+      String label,
+      double value,
+      double min,
+      double max,
+      ColorGrade Function(double) build,
+    ) => Row(
+      children: [
+        SizedBox(width: 92, child: Text(label)),
+        Expanded(
+          child: Slider(
+            value: value.clamp(min, max).toDouble(),
+            min: min,
+            max: max,
+            onChanged: (v) => setState(() => _grade = build(v)),
+            onChangeEnd: (v) => setGrade(build(v)),
+          ),
+        ),
+      ],
+    );
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Ko‘rinish', style: AppText.title(context)),
+            const SizedBox(height: 14),
+            Text('Rang uslubi', style: AppText.caption(context)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Asl'),
+                  selected: _grade == null || _grade!.isNeutral,
+                  onSelected: (_) => setGrade(null),
+                ),
+                for (final e in ColorGrade.presets.entries)
+                  ChoiceChip(
+                    label: Text(_presetNames[e.key] ?? e.key),
+                    selected: _grade != null && _same(_grade!, e.value),
+                    onSelected: (_) => setGrade(e.value),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            slider(
+              'Yorug‘lik',
+              g.exposure,
+              -0.5,
+              0.5,
+              (v) => ColorGrade(
+                exposure: v,
+                contrast: g.contrast,
+                saturation: g.saturation,
+                temperature: g.temperature,
+              ),
+            ),
+            slider(
+              'Kontrast',
+              g.contrast,
+              0.5,
+              2,
+              (v) => ColorGrade(
+                exposure: g.exposure,
+                contrast: v,
+                saturation: g.saturation,
+                temperature: g.temperature,
+              ),
+            ),
+            slider(
+              'To‘yinganlik',
+              g.saturation,
+              0,
+              2.5,
+              (v) => ColorGrade(
+                exposure: g.exposure,
+                contrast: g.contrast,
+                saturation: v,
+                temperature: g.temperature,
+              ),
+            ),
+            slider(
+              'Harorat',
+              g.temperature,
+              -1,
+              1,
+              (v) => ColorGrade(
+                exposure: g.exposure,
+                contrast: g.contrast,
+                saturation: g.saturation,
+                temperature: v,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text('Format', style: AppText.caption(context)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final a in kAspectRatios)
+                  ChoiceChip(
+                    label: Text(a),
+                    selected: plan.aspectRatio == a,
+                    onSelected: (_) => widget.onChanged(
+                      PlanOps.setFormat(json, aspectRatio: a),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text('Logotip (oxirida)', style: AppText.caption(context)),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: widget.onPickLogo,
+                  icon: const Icon(LucideIcons.image, size: 18),
+                  label: Text(
+                    logoClip == null ? 'Rasm tanlash' : 'Boshqasini tanlash',
+                  ),
+                ),
+                if (logoClip != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${logoClip.name} · oxirgi '
+                      '${plan.logo!.durationSec.toStringAsFixed(1)} s',
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption(context),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Logotipni olib tashlash',
+                    onPressed: () =>
+                        widget.onChanged(PlanOps.setLogo(json, null)),
+                    icon: const Icon(
+                      LucideIcons.trash2,
+                      color: AppColors.danger,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Rang va logotip eksport qilingan videoda ko‘rinadi; muharrirdagi '
+              'preview kesimlarni ko‘rsatadi.',
+              style: AppText.caption(context).copyWith(fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static bool _same(ColorGrade a, ColorGrade b) =>
+      (a.exposure - b.exposure).abs() < 0.01 &&
+      (a.contrast - b.contrast).abs() < 0.01 &&
+      (a.saturation - b.saturation).abs() < 0.01 &&
+      (a.temperature - b.temperature).abs() < 0.01;
 }

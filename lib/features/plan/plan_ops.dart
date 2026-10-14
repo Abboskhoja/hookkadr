@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../analysis/domain/edit_plan.dart';
+
 /// Pure edit operations on validated EditPlan JSON.
 ///
 /// Shots form a magnetic (ripple) timeline like Final Cut's: changing one
@@ -354,6 +356,66 @@ abstract final class PlanOps {
     final p = _copy(plan);
     final m = p['music'] as Map<String, dynamic>?;
     if (m != null) m['volume'] = _r(volume.clamp(0.0, 1.0).toDouble());
+    return p;
+  }
+
+  /// Sets (or with null removes) the whole-video colour grade.
+  static Map<String, dynamic> setGrade(
+    Map<String, dynamic> plan,
+    ColorGrade? grade,
+  ) {
+    final p = _copy(plan);
+    if (grade == null || grade.isNeutral) {
+      p.remove('grade');
+    } else {
+      p['grade'] = {
+        for (final e in grade.toJson().entries) e.key: _r(e.value as double),
+      };
+    }
+    return p;
+  }
+
+  /// Puts [clipId] (an image) as the logo over the last [seconds] of the
+  /// video, or with a null [clipId] removes it.
+  static Map<String, dynamic> setLogo(
+    Map<String, dynamic> plan,
+    String? clipId, {
+    double seconds = 2,
+    double scale = 0.3,
+  }) {
+    final p = _copy(plan);
+    if (clipId == null) {
+      p.remove('logo');
+    } else {
+      final total = _num(p['durationSec']);
+      p['logo'] = {
+        'clipId': clipId,
+        'durationSec': _r(seconds.clamp(0.5, total < 5 ? total : 5.0)),
+        'scale': _r(scale.clamp(0.1, 0.8)),
+      };
+    }
+    return p;
+  }
+
+  /// Changes output format: aspect ratio and/or frame rate.
+  static Map<String, dynamic> setFormat(
+    Map<String, dynamic> plan, {
+    String? aspectRatio,
+    int? fps,
+  }) {
+    final p = _copy(plan);
+    if (aspectRatio != null) {
+      if (!kAspectRatios.contains(aspectRatio)) {
+        throw ArgumentError('Unsupported aspect ratio: $aspectRatio');
+      }
+      p['aspectRatio'] = aspectRatio;
+    }
+    if (fps != null) {
+      if (!kSupportedFps.contains(fps)) {
+        throw ArgumentError('Unsupported fps: $fps');
+      }
+      (p['export'] as Map<String, dynamic>)['fps'] = fps;
+    }
     return p;
   }
 

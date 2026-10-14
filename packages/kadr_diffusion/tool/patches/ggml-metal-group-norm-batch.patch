@@ -1,0 +1,51 @@
+ggml Metal GROUP_NORM ignored the batch dimension (ne03): only the first
+item of a batch was normalized and the rest of the output was left
+unwritten. AnimateDiff runs the UNet with all video frames as the batch, so
+every frame after the first came out as noise. Dispatch one threadgroup per
+(group, batch item) and offset src/dst per item. Upstream llama.cpp b11429
+has the same dispatch. Verified: Metal output now matches the CPU backend.
+
+diff --git a/src/ggml-metal/ggml-metal-ops.cpp b/src/ggml-metal/ggml-metal-ops.cpp
+index 708703e..5b15c6c 100644
+--- a/src/ggml-metal/ggml-metal-ops.cpp
++++ b/src/ggml-metal/ggml-metal-ops.cpp
+@@ -4116,7 +4116,7 @@ int ggml_metal_op_group_norm(ggml_metal_op_t ctx, int idx) {
+ 
+     ggml_metal_encoder_set_threadgroup_memory_size(enc, smem, 0);
+ 
+-    ggml_metal_encoder_dispatch_threadgroups(enc, ngrp, 1, 1, nth, 1, 1);
++    ggml_metal_encoder_dispatch_threadgroups(enc, ngrp, ne03, 1, nth, 1, 1);
+ 
+     return 1;
+ }
+diff --git a/src/ggml-metal/kernels/norm.metal b/src/ggml-metal/kernels/norm.metal
+index c76d0c7..45fb0f9 100644
+--- a/src/ggml-metal/kernels/norm.metal
++++ b/src/ggml-metal/kernels/norm.metal
+@@ -241,15 +241,22 @@ kernel void kernel_group_norm_f32(
+         device const float * src0,
+         device       float * dst,
+         threadgroup float  * buf [[threadgroup(0)]],
+-        uint tgpig[[threadgroup_position_in_grid]],
+-        uint tpitg[[thread_position_in_threadgroup]],
++        uint2 tgpig[[threadgroup_position_in_grid]],
++        uint2 tpitg2[[thread_position_in_threadgroup]],
+         uint sgitg[[simdgroup_index_in_threadgroup]],
+         uint tiisg[[thread_index_in_simdgroup]],
+-        uint   ntg[[threads_per_threadgroup]]) {
++        uint2  ntg2[[threads_per_threadgroup]]) {
++    const uint tpitg = tpitg2.x;
++    const uint ntg   = ntg2.x;
+     const int64_t ne = args.ne00*args.ne01*args.ne02;
+     const int64_t gs = args.ne00*args.ne01*((args.ne02 + args.ngrp - 1) / args.ngrp);
+ 
+-    int start = tgpig * gs;
++    // One threadgroup per (group, batch item): every ne03 slice is normalized
++    // on its own, as on the CPU backend.
++    src0 += tgpig.y*ne;
++    dst  += tgpig.y*ne;
++
++    int start = tgpig.x * gs;
+     int end   = start + gs;
+ 
+     start += tpitg;

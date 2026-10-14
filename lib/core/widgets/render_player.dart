@@ -9,8 +9,11 @@ import '../theme/semantic_colors.dart';
 
 /// Real playback of the rendered MP4 (contain inside a neutral stage).
 class RenderPlayer extends StatefulWidget {
-  const RenderPlayer({super.key, required this.path});
+  const RenderPlayer({super.key, required this.path, this.posterAt});
   final String path;
+
+  /// Frame shown before playback (e.g. past a fade-in from black).
+  final Duration? posterAt;
 
   @override
   State<RenderPlayer> createState() => RenderPlayerState();
@@ -27,7 +30,9 @@ class RenderPlayerState extends State<RenderPlayer> {
     super.initState();
     _c
         .initialize()
-        .then((_) {
+        .then((_) async {
+          final at = widget.posterAt;
+          if (at != null) await _c.seekTo(at);
           if (mounted) setState(() => _ready = true);
         })
         .catchError((Object _) {});

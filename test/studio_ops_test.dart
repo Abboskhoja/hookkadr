@@ -172,6 +172,42 @@ void main() {
     });
   });
 
+  group('render: music length', () {
+    RenderArgs build(double? musicSec) => buildRenderArgs(
+      plan: EditPlan.fromJson({
+        ..._plan(),
+        'music': {'path': '/m.mp3', 'name': 'song', 'offsetSec': 2},
+      }),
+      clips: const [
+        ProjectClip(id: 'clip_01', path: '/a.mp4', name: 'a'),
+        ProjectClip(id: 'clip_02', path: '/b.mp4', name: 'b'),
+      ],
+      hasAudio: const {},
+      fontPath: '/f.ttf',
+      textDir: '/t',
+      outputPath: '/o.mp4',
+      videoEncoder: 'h264_videotoolbox',
+      resolution: '720p',
+      musicDurationSec: musicSec,
+    );
+
+    test('a song long enough is read once, never looped', () {
+      final r = build(30);
+      expect(r.args.where((a) => a == '/m.mp3'), hasLength(1));
+      expect(r.args, isNot(contains('-stream_loop')));
+    });
+
+    test('a short song is repeated as inputs and joined, not looped', () {
+      // offset 2 s + video 9 s = 11 s of a 4 s song → 3 copies
+      final r = build(4);
+      expect(r.args.where((a) => a == '/m.mp3'), hasLength(3));
+      expect(r.args, isNot(contains('-stream_loop')));
+      final filter = r.args[r.args.indexOf('-filter_complex') + 1];
+      expect(filter, contains('[2:a][3:a][4:a]concat=n=3:v=0:a=1'));
+      expect(filter, contains('atrim=start=2.000:duration=9.000'));
+    });
+  });
+
   test('render: music is looped, faded, ducked and mixed', () {
     final plan = EditPlan.fromJson({
       ..._plan(),
@@ -196,7 +232,11 @@ void main() {
       videoEncoder: 'h264_videotoolbox',
       resolution: '720p',
     );
-    expect(r.args, containsAllInOrder(['-stream_loop', '-1', '-i', '/m.mp3']));
+    // Never -stream_loop: FFmpeg 7/8 deadlocks in cleanup when a loop
+    // restarts after the output has finished (seen on iOS). Unknown length
+    // = one plain input.
+    expect(r.args, isNot(contains('-stream_loop')));
+    expect(r.args, containsAllInOrder(['-i', '/m.mp3']));
     final filter = r.args[r.args.indexOf('-filter_complex') + 1];
     expect(filter, contains('[2:a]atrim=start=2.000:duration=9.000'));
     expect(filter, contains('volume=0.40'));

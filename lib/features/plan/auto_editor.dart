@@ -1,4 +1,9 @@
+import '../analysis/domain/edit_plan.dart';
 import '../render/media_analyzer.dart';
+
+/// Look and pacing of an offline montage. Each style is a coherent set of
+/// pace, transitions, camera motion and colour grade, all rendered for real.
+enum AutoStyle { dinamik, kino, iliq }
 
 /// Deterministic, offline "quick montage": cuts out pauses, splits on scene
 /// changes, opens with the most dynamic moment and keeps short-form pacing.
@@ -37,6 +42,7 @@ abstract final class AutoEditor {
     required String aspectRatio,
     required String resolution,
     required String title,
+    AutoStyle? style,
   }) {
     // Remaining usable ranges per clip; takes consume them front-to-back so
     // the same footage is never used twice.
@@ -47,7 +53,12 @@ abstract final class AutoEditor {
         ],
     };
     final shotCount = (targetSec / 2.5).round().clamp(3, 24);
-    final pace = (targetSec / shotCount).clamp(1.5, 4.0);
+    final basePace = (targetSec / shotCount).clamp(1.5, 4.0);
+    final pace = switch (style) {
+      AutoStyle.dinamik => (basePace * 0.85).clamp(1.2, 4.0),
+      AutoStyle.kino => (basePace * 1.3).clamp(1.5, 5.0),
+      _ => basePace,
+    };
 
     final picks = <({String clip, double start, double end})>[];
     double total = 0;
@@ -100,7 +111,32 @@ abstract final class AutoEditor {
       final start = r(cursor);
       cursor += d;
       final end = r(cursor);
+      final fx = <String, dynamic>{};
+      if (style != null) {
+        final last = i == picks.length - 1;
+        switch (style) {
+          case AutoStyle.dinamik:
+            // Hard cuts; a quick punch-in on every third shot keeps energy.
+            if (i > 0 && i % 3 == 0) fx['motion'] = 'punchIn';
+          case AutoStyle.kino:
+            fx['motion'] = 'slowZoom';
+            if (i == 0) {
+              fx['transition'] = 'fadeBlack';
+              fx['transitionSec'] = 0.8;
+            } else if (d >= 1.6) {
+              fx['transition'] = 'crossfade';
+              fx['transitionSec'] = 0.5;
+            }
+          case AutoStyle.iliq:
+            if (i > 0 && d >= 1.4) {
+              fx['transition'] = 'crossfade';
+              fx['transitionSec'] = 0.35;
+            }
+            if (i.isOdd || last) fx['motion'] = 'slowZoom';
+        }
+      }
       shots.add({
+        ...fx,
         'id': 's${i + 1}',
         'startSec': start,
         'endSec': end,
@@ -128,6 +164,12 @@ abstract final class AutoEditor {
       'captions': <Map<String, dynamic>>[],
       'audioTracks': <Map<String, dynamic>>[],
       'export': {'resolution': resolution, 'fps': 30},
+      if (style != null)
+        'grade': switch (style) {
+          AutoStyle.dinamik => ColorGrade.presets['jonli']!.toJson(),
+          AutoStyle.kino => ColorGrade.presets['kino']!.toJson(),
+          AutoStyle.iliq => ColorGrade.presets['iliq']!.toJson(),
+        },
     };
   }
 }

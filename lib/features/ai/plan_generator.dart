@@ -41,14 +41,16 @@ class PlanGenerator {
   /// Small on-device models write a plain shot list; Dart builds the plan.
   bool get _simple => planner.kind == ProviderKind.offline;
 
-  static const _chatSystem = '''
-You are HOOKKADR, a friendly AI video director inside a mobile video studio.
+  static const chatSystem = '''
+You are Kadr AI, the friendly AI video director of the HOOKKADR mobile video studio.
 You help people plan, edit and improve short videos (Reels, TikTok, Shorts,
 ads). Answer in the user's language (default Uzbek, Latin script), clearly
 and briefly. You can: build an edit plan from an idea or from attached
 videos, edit the current plan ("3-kadrni qisqartir"), render the final MP4
-on the device, and generate images or AI video clips when a provider that
-supports it is connected. Never claim you did something you did not do.''';
+on the device, and draw images and short videos on the phone itself when
+Kadr AI's painter is installed (Profile → Kadr AI on the phone). The user
+asks for a picture with the "Rasm" mode and for a video with the "Video"
+mode. Never claim you did something you did not do.''';
 
   /// The planner writes a professional prompt for an image/video model.
   Future<String> writeGenerationPrompt({
@@ -61,6 +63,28 @@ supports it is connected. Never claim you did something you did not do.''';
           ? 'AI video uchun prompt yozilmoqda'
           : 'AI rasm uchun prompt yozilmoqda',
     );
+    final p = planner;
+    if (_simple && p is GrammarTextModel) {
+      // On-device painter only understands English: the grammar allows
+      // nothing but plain English characters.
+      final out = await p.completeWithGrammar(
+        system:
+            'You translate a picture request into one English image description '
+            'for an image model. Write only the description: main subject, '
+            'setting, lighting, colors, camera framing. At most 45 words. '
+            'No text, letters or logos in the picture.',
+        messages: [
+          {'role': 'user', 'content': request},
+        ],
+        grammar: imagePromptGrammar,
+        maxTokens: 120,
+      );
+      final cleaned = cleanImagePrompt(out);
+      if (cleaned.isEmpty) {
+        throw const AiException('Kadr AI rasm tavsifini yoza olmadi.');
+      }
+      return cleaned;
+    }
     final text = await planner.complete(
       system:
           'You write prompts for ${video ? 'a text-to-video model (Google Veo)' : 'a text-to-image model'}. '
@@ -90,6 +114,35 @@ supports it is connected. Never claim you did something you did not do.''';
     int scenes = 5,
   }) async {
     onStage?.call('Sahnalar yozilmoqda');
+    final p = planner;
+    if (_simple && p is GrammarTextModel) {
+      final raw = await p.completeWithGrammar(
+        system:
+            'You are a creative director. You write storyboards for short videos '
+            'made of AI-drawn scenes. Follow the format exactly.',
+        messages: [
+          {
+            'role': 'user',
+            'content':
+                'Idea (any language): $request\n'
+                'Write exactly $scenes scenes for a $durationSec-second video. '
+                'Each line: SCENE: <English picture description, max 35 words: '
+                'subject, setting, lighting, colors> | <short on-screen caption '
+                'in the idea\'s language, or ->\n'
+                'Describe the main subject the same way in every scene.',
+          },
+        ],
+        grammar: storyboardGrammar(scenes),
+        maxTokens: 120 * scenes,
+      );
+      final out = parseGrammarStoryboard(raw, durationSec: durationSec);
+      if (out.length < 2) {
+        throw const AiException(
+          'Kadr AI sahnalarni yoza olmadi. Qayta urinib ko‘ring.',
+        );
+      }
+      return out;
+    }
     final raw = await planner.complete(
       system:
           'You are a creative director writing a storyboard for a short vertical '
@@ -116,6 +169,48 @@ supports it is connected. Never claim you did something you did not do.''';
       );
     }
     return scenesOut;
+  }
+
+  /// GBNF for one English image description (ASCII letters only, so a
+  /// small model cannot drift into another language).
+  static const imagePromptGrammar =
+      "root ::= [A-Za-z] [A-Za-z0-9 ,.'()-]{15,280}\n";
+
+  /// GBNF for exactly [scenes] lines `SCENE: <English> | <caption or ->`.
+  static String storyboardGrammar(int scenes) =>
+      'root ::= ${List.filled(scenes.clamp(2, 8), 'scene').join(' ')}\n'
+      'scene ::= "SCENE: " en " | " cap "\\n"\n'
+      "en ::= [A-Za-z] [A-Za-z0-9 ,.'()-]{15,220}\n"
+      'cap ::= "-" | [^|\\n]{2,40}\n';
+
+  /// Trims an image description to what the painter's text encoder reads
+  /// (about 60 words) and drops dangling punctuation.
+  static String cleanImagePrompt(String raw) {
+    final words = raw.trim().split(RegExp(r'\s+'));
+    final s = (words.length > 60 ? words.sublist(0, 60) : words).join(' ');
+    return s.replaceAll(RegExp(r'[\s,(-]+$'), '').trim();
+  }
+
+  /// Pure: grammar storyboard lines -> evenly timed scenes.
+  static List<StoryScene> parseGrammarStoryboard(
+    String raw, {
+    required int durationSec,
+  }) {
+    final rows = <(String, String?)>[];
+    for (final l in raw.split('\n')) {
+      final m = RegExp(r'^\s*SCENE:\s*(.+?)\s*\|\s*(.*?)\s*$').firstMatch(l);
+      if (m == null) continue;
+      final prompt = cleanImagePrompt(m.group(1)!);
+      final cap = m.group(2)!.trim();
+      if (prompt.isEmpty) continue;
+      rows.add((prompt, cap.isEmpty || cap == '-' ? null : cap));
+    }
+    if (rows.isEmpty) return const [];
+    final sec = durationSec / rows.length;
+    return [
+      for (final (prompt, cap) in rows)
+        StoryScene(sec: sec, prompt: prompt, caption: cap),
+    ];
   }
 
   static List<StoryScene> parseStoryboard(String raw) {
@@ -195,7 +290,7 @@ supports it is connected. Never claim you did something you did not do.''';
   Future<String> converse(List<Map<String, String>> history) async {
     onStage?.call('Javob yozilmoqda');
     final text = await planner.complete(
-      system: _chatSystem,
+      system: chatSystem,
       messages: history,
       maxTokens: 1200,
     );
@@ -212,7 +307,7 @@ Schema (schemaVersion is always 1):
   "title": string,
   "summary": string,
   "durationSec": number,
-  "aspectRatio": "9:16" | "16:9" | "1:1" | "4:5",
+  "aspectRatio": "9:16" | "16:9" | "1:1" | "4:5" | "3:4",
   "shots": [{"id": "s1", "startSec": number, "endSec": number,
              "description": string, "camera": string, "transitionIn": string,
              "mediaSlotId": string | null,
@@ -226,7 +321,9 @@ Schema (schemaVersion is always 1):
   "captions": [{"startSec": number, "endSec": number, "text": string}],
   "audioTracks": [{"kind": "music"|"voiceover"|"sfx", "startSec": number,
                    "endSec": number, "description": string}],
-  "export": {"resolution": "1080p", "fps": 30}
+  "export": {"resolution": "1080p", "fps": 30},
+  "grade": {"exposure": -0.5..0.5, "contrast": 0.5..2,
+            "saturation": 0..2.5, "temperature": -1..1}   // optional look
 }
 
 Rules:
@@ -249,7 +346,10 @@ Rules:
   ads → mostly "cut" with "punchIn" on key moments and speed 1–1.5;
   cinematic / emotional → "crossfade" (0.4–0.8 s) and "slowZoom";
   first shot may use "fadeBlack". speed 0.25–4 (0.5 = slow motion).
-  transitionSec 0.2–1.0. Omit fields you do not need (defaults: cut, 1×, none).''';
+  transitionSec 0.2–1.0. Omit fields you do not need (defaults: cut, 1×, none).
+- "grade" is optional: premium / cinematic → contrast 1.1–1.2, saturation
+  0.85–0.95, temperature +0.15..+0.3; warm product ads → temperature +0.3.
+  Never invent a "logo" field: the app adds logos itself.''';
 
   Future<Map<String, dynamic>> fromPrompt({
     required String prompt,
@@ -298,8 +398,8 @@ Rules:
     }
     if (g == null) {
       throw const AiException(
-        'Videolarni ko‘rib tahlil qilish uchun Gemini kerak. '
-        'AI ulanishlari bo‘limidan Gemini’ni ulang.',
+        'Videolarni ko‘rib tahlil qilish uchun Claude yoki Gemini kerak. '
+        'AI ulanishlari bo‘limidan ulang.',
       );
     }
     final analyses = StringBuffer();
@@ -438,14 +538,39 @@ Rules:
         : 'Current shot list (seconds | what we see | text):\n$editOf\n\n'
               'Apply this change: $instruction\n'
               'Return the full updated list in the same format, nothing else.';
-    final raw = await planner.complete(
-      system:
-          'You are a concise video editor. Follow the output format exactly.',
-      messages: [
-        {'role': 'user', 'content': ask},
-      ],
-      maxTokens: 900,
-    );
+    final p = planner;
+    final String raw;
+    if (p is GrammarTextModel) {
+      // On-device Kadr AI: Uzbek instructions, format enforced by grammar.
+      final uz = editOf == null
+          ? '$durationSec soniyalik vertikal video uchun kadrlar ro‘yxati.\n'
+                'G‘oya: $idea$clipInfo\n'
+                'Aniq $n qator yoz. Har qator: <soniya> | <nima ko‘rinadi, qisqa> | '
+                '<ekrandagi matn yoki ->\n'
+                'Birinchi kadr kuchli hook, oxirgisi chaqiriq (CTA).'
+          : 'Hozirgi kadrlar (soniya | nima ko‘rinadi | matn):\n$editOf\n\n'
+                'Shu o‘zgarishni kirit: $instruction\n'
+                'To‘liq yangilangan ro‘yxatni shu formatda yoz.';
+      raw = await p.completeWithGrammar(
+        system:
+            'Sen tajribali video montajchisan. Formatga aniq amal qil. '
+            'Faqat o‘zbek tilida (lotin) yoz.',
+        messages: [
+          {'role': 'user', 'content': uz},
+        ],
+        grammar: shotListGrammar(editOf == null ? n : null),
+        maxTokens: 700,
+      );
+    } else {
+      raw = await planner.complete(
+        system:
+            'You are a concise video editor. Follow the output format exactly.',
+        messages: [
+          {'role': 'user', 'content': ask},
+        ],
+        maxTokens: 900,
+      );
+    }
     onStage?.call('Reja tekshirilmoqda');
     final plan = buildSimplePlan(
       raw: raw,
@@ -461,6 +586,20 @@ Rules:
     return plan;
   }
 
+  /// GBNF for "seconds | what we see | text" lines: exactly [lines] of them,
+  /// or 2–12 when the count may change (edits). Seconds are 1–4.5.
+  static String shotListGrammar(int? lines) {
+    final body = lines == null
+        ? 'line line ${List.filled(10, 'line?').join(' ')}'
+        : List.filled(lines.clamp(2, 12), 'line').join(' ');
+    return 'root ::= $body\n'
+        'line ::= num " | " desc " | " txt "\\n"\n'
+        // 1–4.5 s per shot: short-form pacing; the plan is scaled to fit.
+        'num ::= [1-4] ("." "5")?\n'
+        'desc ::= [^|\\n]{3,90}\n'
+        'txt ::= "-" | [^|\\n]{1,60}\n';
+  }
+
   /// Pure, testable: shot-list text -> valid EditPlan JSON.
   static Map<String, dynamic> buildSimplePlan({
     required String raw,
@@ -473,15 +612,21 @@ Rules:
     int fallbackCount = 3,
   }) {
     final line = RegExp(
-      r'^\s*(?:[-*\d]+[.)]\s*)?([\d]+(?:[.,]\d+)?)\s*s?\s*\|\s*([^|]+?)\s*(?:\|\s*(.*?))?\s*$',
+      r'^\s*(?:[-*\d]+[.)]\s*)?(?:([\d]+(?:[.,]\d+)?)\s*s?\s*[-–]\s*)?([\d]+(?:[.,]\d+)?)\s*s?\s*\|\s*([^|]+?)\s*(?:\|\s*(.*?))?\s*$',
     );
     final rows = <({double sec, String what, String? text})>[];
     for (final l in raw.split('\n')) {
       final m = line.firstMatch(l);
       if (m == null) continue;
-      final sec = double.tryParse(m.group(1)!.replaceAll(',', '.')) ?? 0;
-      final what = m.group(2)!.trim();
-      final txt = m.group(3)?.trim();
+      double num(String v) => double.tryParse(v.replaceAll(',', '.')) ?? 0;
+      final from = m.group(1);
+      final to = num(m.group(2)!);
+      // "1-3s" is a time range: its length is the duration.
+      final double sec = from == null
+          ? to
+          : (to - num(from) > 0 ? to - num(from) : 1.0);
+      final what = m.group(3)!.trim();
+      final txt = m.group(4)?.trim();
       if (sec <= 0 || what.isEmpty) continue;
       rows.add((
         sec: sec,

@@ -1,0 +1,226 @@
+{
+  "fixture": "synthetic test pattern and sine tone, not generated advertising",
+  "output": "ai/runs/kart_demo/verified.mp4",
+  "sizeBytes": 1711804,
+  "durationSec": 10.0,
+  "fps": 25.0,
+  "width": 640,
+  "height": 360,
+  "modelVersion": "1.0.0",
+  "sampleCount": 5,
+  "technicalQuality": 0.8781201420459592,
+  "flags": {
+    "overexposed": 5
+  },
+  "plan": {
+    "schemaVersion": 1,
+    "title": "TEST — KART render namoyishi",
+    "summary": "Avto-montaj: 4 kadr, 10.0 s.",
+    "durationSec": 10.0,
+    "aspectRatio": "16:9",
+    "shots": [
+      {
+        "motion": "slowZoom",
+        "transition": "fadeBlack",
+        "transitionSec": 0.8,
+        "id": "s1",
+        "startSec": 0.0,
+        "endSec": 2.0,
+        "description": "Hook · demo 0.0–2.0 s",
+        "transitionIn": "cut",
+        "sourceClipId": "demo",
+        "sourceIn": 0.0,
+        "sourceOut": 2.0
+      },
+      {
+        "motion": "slowZoom",
+        "transition": "crossfade",
+        "transitionSec": 0.5,
+        "id": "s2",
+        "startSec": 2.0,
+        "endSec": 5.25,
+        "description": "demo 2.0–5.3 s",
+        "transitionIn": "hard cut",
+        "sourceClipId": "demo",
+        "sourceIn": 2.0,
+        "sourceOut": 5.25
+      },
+      {
+        "motion": "slowZoom",
+        "transition": "crossfade",
+        "transitionSec": 0.5,
+        "id": "s3",
+        "startSec": 5.25,
+        "endSec": 8.5,
+        "description": "demo 5.3–8.5 s",
+        "transitionIn": "hard cut",
+        "sourceClipId": "demo",
+        "sourceIn": 5.25,
+        "sourceOut": 8.5
+      },
+      {
+        "motion": "slowZoom",
+        "id": "s4",
+        "startSec": 8.5,
+        "endSec": 10.0,
+        "description": "Yakun · demo 8.5–10.0 s",
+        "transitionIn": "hard cut",
+        "sourceClipId": "demo",
+        "sourceIn": 8.5,
+        "sourceOut": 10.0
+      }
+    ],
+    "mediaSlots": [],
+    "captions": [
+      {
+        "startSec": 0.0,
+        "endSec": 2.0,
+        "text": "Yaqindan ko‘ring"
+      },
+      {
+        "startSec": 8.0,
+        "endSec": 10.0,
+        "text": "Batafsil bog‘laning"
+      }
+    ],
+    "audioTracks": [],
+    "export": {
+      "resolution": "360p",
+      "fps": 25
+    },
+    "grade": {
+      "exposure": -0.03,
+      "contrast": 1.15,
+      "saturation": 0.9,
+      "temperature": 0.2
+    },
+    "production": {
+      "schema": "kart.production/1",
+      "implementation": "deterministic",
+      "request": "10 soniyalik premium reklama yarat",
+      "brief": {
+        "subject": "TEST — KART render namoyishi",
+        "durationSec": 10,
+        "aspectRatio": "16:9",
+        "style": "kino"
+      },
+      "storyboard": [
+        {
+          "shotId": "s1",
+          "startSec": 0.0,
+          "endSec": 2.0,
+          "purpose": "hook",
+          "sourceClipId": "demo",
+          "captureDirection": {
+            "composition": "Mahsulot to‘liq, kadr chetlarida bo‘sh joy",
+            "lensSuggestionMm": 35,
+            "lighting": "Yumshoq yon yorug‘lik; rang va shaklni saqlash",
+            "movement": "Sekin yaqinlashish",
+            "status": "proposed"
+          },
+          "generationInstruction": "TEST — KART render namoyishi: hook. 2.00 s, 16:9. Mahsulot reference kerak; shakl, rang va naqshni tekshiring. Matn va logotip alohida qatlamda. Bu topshiriq hali bajarilmagan."
+        },
+        {
+          "shotId": "s2",
+          "startSec": 2.0,
+          "endSec": 5.25,
+          "purpose": "detal",
+          "sourceClipId": "demo",
+          "captureDirection": {
+            "composition": "Yaqin detal, fon sodda",
+            "lensSuggestionMm": 85,
+            "lighting": "Yumshoq yon yorug‘lik; rang va shaklni saqlash",
+            "movement": "Barqaror kadr",
+            "status": "proposed"
+          },
+          "generationInstruction": "TEST — KART render namoyishi: detal. 3.25 s, 16:9. Mahsulot reference kerak; shakl, rang va naqshni tekshiring. Matn va logotip alohida qatlamda. Bu topshiriq hali bajarilmagan."
+        },
+        {
+          "shotId": "s3",
+          "startSec": 5.25,
+          "endSec": 8.5,
+          "purpose": "namoyish",
+          "sourceClipId": "demo",
+          "captureDirection": {
+            "composition": "Mahsulot to‘liq, kadr chetlarida bo‘sh joy",
+            "lensSuggestionMm": 35,
+            "lighting": "Yumshoq yon yorug‘lik; rang va shaklni saqlash",
+            "movement": "Barqaror kadr",
+            "status": "proposed"
+          },
+          "generationInstruction": "TEST — KART render namoyishi: namoyish. 3.25 s, 16:9. Mahsulot reference kerak; shakl, rang va naqshni tekshiring. Matn va logotip alohida qatlamda. Bu topshiriq hali bajarilmagan."
+        },
+        {
+          "shotId": "s4",
+          "startSec": 8.5,
+          "endSec": 10.0,
+          "purpose": "yakun",
+          "sourceClipId": "demo",
+          "captureDirection": {
+            "composition": "Yaqin detal, fon sodda",
+            "lensSuggestionMm": 85,
+            "lighting": "Yumshoq yon yorug‘lik; rang va shaklni saqlash",
+            "movement": "Barqaror kadr",
+            "status": "proposed"
+          },
+          "generationInstruction": "TEST — KART render namoyishi: yakun. 1.50 s, 16:9. Mahsulot reference kerak; shakl, rang va naqshni tekshiring. Matn va logotip alohida qatlamda. Bu topshiriq hali bajarilmagan."
+        }
+      ],
+      "evidence": [
+        {
+          "skill": "creative_planner",
+          "state": "verified",
+          "summary": "10 s uchun hook → detal → namoyish → yakun tuzilmasi tayyor."
+        },
+        {
+          "skill": "storyboard",
+          "state": "verified",
+          "summary": "4 kadrli storyboard, kamera va yorug‘lik ko‘rsatmalari yozildi. Bular suratga olish takliflari."
+        },
+        {
+          "skill": "editor",
+          "state": "verified",
+          "summary": "4 kadr, 10.0 s: manba oraliqlari timeline’ga joylandi."
+        },
+        {
+          "skill": "colorist",
+          "state": "verified",
+          "summary": "Rang parametrlari rejaga yozildi; pikselga eksportda qo‘llanadi."
+        },
+        {
+          "skill": "copywriter",
+          "state": "verified",
+          "summary": "Hook va yakuniy chaqiriq timeline’ga qo‘shildi."
+        },
+        {
+          "skill": "sound_designer",
+          "state": "blocked",
+          "summary": "Musiqa yaratilmagan. Kerakli audio faylni tanlang."
+        },
+        {
+          "skill": "quality_control",
+          "state": "verified",
+          "summary": "Reja tekshirildi: 0 muammo; media qamrovi 100%. Kadr mazmuni va mahsulot o‘xshashligi baholanmagan."
+        },
+        {
+          "skill": "render",
+          "state": "planned",
+          "summary": "MP4 hali yaratilmagan. Eksport orqali render qiling."
+        }
+      ],
+      "metrics": {
+        "requestedDurationSec": 10.0,
+        "plannedDurationSec": 10.0,
+        "durationShortfallSec": 0.0,
+        "mediaCoverage": 1.0,
+        "shotCount": 4.0,
+        "maxCaptionCharsPerSecond": 9.5,
+        "problemCount": 0.0
+      },
+      "planSignature": "642a14c1",
+      "mediaGenerated": false,
+      "renderVerified": false
+    }
+  },
+  "sha256": "ba8e57b1f4ad30739a32960f945e8176c9b053863f30a061e27018636ad0a151"
+}

@@ -23,14 +23,14 @@ extension ProviderInfo on ProviderKind {
     ProviderKind.claude => 'Claude',
     ProviderKind.openai => 'OpenAI',
     ProviderKind.gemini => 'Gemini',
-    ProviderKind.offline => 'Offline AI',
+    ProviderKind.offline => 'Kadr AI (telefonda)',
   };
 
   String get role => switch (this) {
     ProviderKind.hookkadr => 'Kirish bilan — kalitsiz, kreditlar bilan',
     ProviderKind.openrouter =>
       'Bitta login: Claude, GPT, Gemini — suhbat, video tahlil, rasm',
-    ProviderKind.claude => 'Ssenariy va montaj rejasi',
+    ProviderKind.claude => 'Videoni ko‘rib montaj rejasi tuzadi',
     ProviderKind.openai => 'Montaj rejasi va suhbat',
     ProviderKind.gemini => 'Videoni ko‘rib tahlil qilish',
     ProviderKind.offline => 'Internetsiz suhbat va reja (qurilmada)',
@@ -61,7 +61,9 @@ extension ProviderInfo on ProviderKind {
   bool get needsKey =>
       this != ProviderKind.offline && this != ProviderKind.hookkadr;
   bool get canWatchVideo =>
-      this == ProviderKind.gemini || this == ProviderKind.openrouter;
+      this == ProviderKind.gemini ||
+      this == ProviderKind.openrouter ||
+      this == ProviderKind.claude; // Claude looks at extracted frames
 
   /// Connected by signing in (OAuth) rather than pasting a key.
   bool get usesLogin =>
@@ -98,6 +100,17 @@ abstract class TextModel {
 
   /// Cheap authenticated request that proves the key works.
   Future<void> verify();
+}
+
+/// A model whose output can be forced into a GBNF grammar (the on-device
+/// Kadr AI). Small local models need this to follow formats reliably.
+abstract class GrammarTextModel implements TextModel {
+  Future<String> completeWithGrammar({
+    required String system,
+    required List<Map<String, String>> messages,
+    required String grammar,
+    int maxTokens = 600,
+  });
 }
 
 /// Runs an HTTP call with a timeout and turns transport failures into
@@ -185,6 +198,57 @@ class ClaudeClient implements TextModel {
         .join();
   }
 
+  /// Vision: asks Claude about labelled JPEG frames (Messages API image
+  /// blocks). Each image is preceded by its label so timestamps are exact.
+  Future<String> describeImages({
+    required String system,
+    required List<({String label, Uint8List jpeg})> images,
+    required String prompt,
+    int maxTokens = 1500,
+  }) async {
+    final content = <Map<String, dynamic>>[
+      for (final img in images) ...[
+        {'type': 'text', 'text': img.label},
+        {
+          'type': 'image',
+          'source': {
+            'type': 'base64',
+            'media_type': 'image/jpeg',
+            'data': base64Encode(img.jpeg),
+          },
+        },
+      ],
+      {'type': 'text', 'text': prompt},
+    ];
+    final res = await guardRequest(
+      () => _client.post(
+        Uri.parse('https://api.anthropic.com/v1/messages'),
+        headers: _headers,
+        body: jsonEncode({
+          'model': model,
+          'max_tokens': maxTokens,
+          'system': system,
+          'messages': [
+            {'role': 'user', 'content': content},
+          ],
+        }),
+      ),
+      'Claude',
+    );
+    final body = _json(res);
+    final u = body['usage'] as Map<String, dynamic>?;
+    TokenMeter.instance.record(
+      kind,
+      (u?['input_tokens'] as num?)?.toInt() ?? 0,
+      (u?['output_tokens'] as num?)?.toInt() ?? 0,
+    );
+    return (body['content'] as List)
+        .whereType<Map<String, dynamic>>()
+        .where((b) => b['type'] == 'text')
+        .map((b) => b['text'] as String)
+        .join();
+  }
+
   @override
   Future<void> verify() async {
     await guardRequest(
@@ -251,7 +315,9 @@ class OpenAiClient implements TextModel, ImageGenerator {
     return text;
   }
 
-  static const imageModel = 'gpt-image-1';
+  /// `gpt-image-1` is shut down by OpenAI on 2026-10-23; the 2.5 models use the
+  /// same `/v1/images/generations` endpoint.
+  static const imageModel = 'gpt-image-2.5-flare';
 
   /// Text-to-image. Returns PNG bytes.
   @override

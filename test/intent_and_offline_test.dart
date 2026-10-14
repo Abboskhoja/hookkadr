@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hookkadr/features/ai/ai_clients.dart';
 import 'package:hookkadr/features/ai/intent.dart';
-import 'package:hookkadr/features/ai/offline_model.dart';
 import 'package:hookkadr/features/ai/plan_generator.dart';
 import 'package:hookkadr/features/analysis/domain/edit_plan.dart';
 import 'package:http/http.dart' as http;
@@ -99,10 +98,6 @@ void main() {
       expect(p.shots, hasLength(4));
       expect(p.shots.first.description, contains('Sayohat'));
       expect(p.durationSec, 10);
-    });
-
-    test('thinking blocks are removed from offline answers', () {
-      expect(OfflineLlm.stripThinking('<think>hmm</think>\nSalom'), 'Salom');
     });
   });
 

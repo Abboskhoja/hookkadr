@@ -5,7 +5,7 @@ import '../../app/app_controller.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../ai/ai_clients.dart';
-import '../ai/offline_model.dart';
+import '../kadr_ai/model_catalog.dart';
 import '../ai/openrouter.dart';
 import 'connect_provider_sheet.dart';
 import 'hookkadr_account_card.dart';
@@ -22,7 +22,7 @@ class ConnectionsScreen extends StatelessWidget {
     ProviderKind.claude: ClaudeClient.defaultModel,
     ProviderKind.openai: OpenAiClient.defaultModel,
     ProviderKind.gemini: GeminiClient.defaultModel,
-    ProviderKind.offline: OfflineLlm.label,
+    ProviderKind.offline: 'Gemma 4 E2B (telefonda)',
     ProviderKind.openrouter: OpenRouterClient.planModel,
     ProviderKind.hookkadr: 'Server: Claude + Gemini',
   };
@@ -154,7 +154,7 @@ class _OfflineCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Offline AI',
+                      'Kadr AI (internetsiz)',
                       style: AppText.body(context)
                           .copyWith(fontWeight: FontWeight.w700),
                     ),
@@ -166,8 +166,8 @@ class _OfflineCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       app.offlineInstalled
-                          ? 'O‘rnatilgan · ${OfflineLlm.label}'
-                          : '${OfflineLlm.label} · ~${OfflineLlm.approxSizeMb} MB bir marta yuklanadi',
+                          ? 'O‘rnatilgan · ${KadrModelPack.brain.baseModel}'
+                          : '${KadrModelPack.brain.baseModel} · ${KadrModelPack.brain.sizeLabel} bir marta yuklanadi',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,

@@ -1,0 +1,928 @@
+-- The C compiler identification is AppleClang 21.0.0.21000334
+-- The CXX compiler identification is AppleClang 21.0.0.21000334
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Use Metal as backend stable-diffusion
+-- stable-diffusion.cpp version master-929-3f8527a
+-- stable-diffusion.cpp commit 3f8527a
+-- Build static library
+-- The ASM compiler identification is AppleClang
+-- Found assembler: /usr/bin/cc
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Warning: ccache not found - consider installing it for faster compilation or disable this warning with GGML_CCACHE=OFF
+-- CMAKE_SYSTEM_PROCESSOR: arm64
+-- GGML_SYSTEM_ARCH: ARM
+-- Could NOT find OpenMP_C (missing: OpenMP_C_FLAGS OpenMP_C_LIB_NAMES) 
+-- Could NOT find OpenMP_CXX (missing: OpenMP_CXX_FLAGS OpenMP_CXX_LIB_NAMES) 
+-- Could NOT find OpenMP (missing: OpenMP_C_FOUND OpenMP_CXX_FOUND) 
+CMake Warning at ggml/src/CMakeLists.txt:347 (message):
+  OpenMP not found
+
+
+-- Including CPU backend
+-- Accelerate framework found
+-- ARM detected
+-- Performing Test GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E
+-- Performing Test GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E - Failed
+CMake Warning at ggml/src/ggml-cpu/CMakeLists.txt:140 (message):
+  ARM -march/-mcpu not found, -mcpu=native will be used
+Call Stack (most recent call first):
+  ggml/src/CMakeLists.txt:586 (ggml_add_cpu_backend_variant_impl)
+
+
+-- Performing Test GGML_MACHINE_SUPPORTS_dotprod
+-- Performing Test GGML_MACHINE_SUPPORTS_dotprod - Success
+-- Performing Test GGML_MACHINE_SUPPORTS_i8mm
+-- Performing Test GGML_MACHINE_SUPPORTS_i8mm - Success
+-- Performing Test GGML_MACHINE_SUPPORTS_sve
+-- Performing Test GGML_MACHINE_SUPPORTS_sve - Failed
+-- Performing Test GGML_MACHINE_SUPPORTS_nosve
+-- Performing Test GGML_MACHINE_SUPPORTS_nosve - Success
+-- Performing Test GGML_MACHINE_SUPPORTS_sme
+-- Performing Test GGML_MACHINE_SUPPORTS_sme - Failed
+-- Performing Test GGML_MACHINE_SUPPORTS_nosme
+-- Performing Test GGML_MACHINE_SUPPORTS_nosme - Success
+-- Checking for ARM features using flags:
+--   -U__ARM_FEATURE_SVE
+--   -U__ARM_FEATURE_SME
+--   -mcpu=native+dotprod+i8mm+nosve+nosme
+-- Performing Test HAVE_DOTPROD
+-- Performing Test HAVE_DOTPROD - Success
+-- Performing Test HAVE_SVE
+-- Performing Test HAVE_SVE - Failed
+-- Performing Test HAVE_MATMUL_INT8
+-- Performing Test HAVE_MATMUL_INT8 - Success
+-- Performing Test HAVE_FMA
+-- Performing Test HAVE_FMA - Success
+-- Performing Test HAVE_FP16_VECTOR_ARITHMETIC
+-- Performing Test HAVE_FP16_VECTOR_ARITHMETIC - Success
+-- Performing Test HAVE_SME
+-- Performing Test HAVE_SME - Failed
+-- Adding CPU backend variant ggml-cpu: -U__ARM_FEATURE_SVE;-U__ARM_FEATURE_SME;-mcpu=native+dotprod+i8mm+nosve+nosme 
+-- Looking for dgemm_
+-- Looking for dgemm_ - found
+-- Found BLAS: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/Accelerate.framework
+-- BLAS found, Libraries: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/Accelerate.framework
+-- BLAS found, Includes: 
+-- Including BLAS backend
+-- Metal framework found
+-- Including METAL backend
+-- ggml version: 0.25.3
+-- ggml commit:  89c4413
+-- Looking for include file alloca.h
+-- Looking for include file alloca.h - found
+-- Looking for include file stdint.h
+-- Looking for include file stdint.h - found
+-- Looking for include file sys/times.h
+-- Looking for include file sys/times.h - found
+-- Looking for include file sys/time.h
+-- Looking for include file sys/time.h - found
+-- Looking for include file sys/types.h
+-- Looking for include file sys/types.h - found
+-- Looking for include file unistd.h
+-- Looking for include file unistd.h - found
+-- Looking for include file inttypes.h
+-- Looking for include file inttypes.h - found
+-- Looking for stddef.h
+-- Looking for stddef.h - found
+-- Check size of int
+-- Check size of int - done
+-- Check size of long
+-- Check size of long - done
+-- Check size of long long
+-- Check size of long long - done
+-- Check size of void*
+-- Check size of void* - done
+-- Looking for alloca
+-- Looking for alloca - found
+CMake Warning at examples/server/CMakeLists.txt:58 (message):
+  pnpm not found; frontend build disabled.
+
+
+-- HAVE_INDEX_HTML disabled
+-- Configuring done (14.5s)
+-- Generating done (0.6s)
+-- Build files have been written to: /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/build/host
+[0/2] Re-checking globbed directories...
+[1/160] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml-alloc.c.o
+[2/160] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o
+[3/160] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml.cpp.o
+[4/160] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ggml-cpu.cpp.o
+[5/160] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/hbm.cpp.o
+[6/160] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ggml-cpu.c.o
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/ggml-cpu.c:1911:13: warning: enumeration values 'GGML_OP_SAGE_ATTN' and 'GGML_OP_SOL_ATTN' not handled in switch [-Wswitch]
+ 1911 |     switch (tensor->op) {
+      |             ^~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/ggml-cpu.c:1911:13: note: add missing switch cases
+ 1911 |     switch (tensor->op) {
+      |             ^
+1 warning generated.
+[7/160] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o
+[8/160] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml.c.o
+[9/160] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-backend.cpp.o
+[10/160] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/iqp.cpp.o
+[11/160] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/traits.cpp.o
+[12/160] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/amx/amx.cpp.o
+[13/160] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/amx/mmq.cpp.o
+[14/160] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/quants.c.o
+[15/160] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/arch/arm/quants.c.o
+[16/160] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o
+[17/160] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o
+[18/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/ascii.c.o
+[19/160] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/vec.cpp.o
+[20/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/regenc.c.o
+[21/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/regerror.c.o
+[22/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/regcomp.c.o
+[23/160] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/arch/arm/repack.cpp.o
+[24/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/regexec.c.o
+[25/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/st.c.o
+[26/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/unicode_fold1_key.c.o
+[27/160] Building CXX object ggml/src/ggml-blas/CMakeFiles/ggml-blas.dir/ggml-blas.cpp.o
+[28/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/unicode_fold2_key.c.o
+[29/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/unicode_fold3_key.c.o
+[30/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/unicode_unfold_key.c.o
+[31/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/utf8.c.o
+[32/160] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o
+[33/160] Building C object thirdparty/CMakeFiles/zip.dir/zip.c.o
+[34/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/unicode.c.o
+[35/160] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/binary-ops.cpp.o
+[36/160] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/unary-ops.cpp.o
+[37/160] Building C object thirdparty/CMakeFiles/onig.dir/oniguruma/regparse.c.o
+[38/160] Building C object thirdparty/CMakeFiles/sd-utf8proc.dir/utf8proc/utf8proc.c.o
+[39/160] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/repack.cpp.o
+[40/160] Linking CXX static library ggml/src/libggml-base.a
+[41/160] Generate embedded Metal library for unary
+[42/160] Generate embedded Metal library for binbcast
+[43/160] Generate embedded Metal library for softmax
+[44/160] Generate embedded Metal library for reduce
+[45/160] Generate embedded Metal library for norm
+[46/160] Generate embedded Metal library for quantize
+[47/160] Generate embedded Metal library for mul_mm
+[48/160] Generate embedded Metal library for mul_mv
+[49/160] Generate embedded Metal library for fa
+[50/160] Generate embedded Metal library for solve_tri
+[51/160] Generate embedded Metal library for tri
+[52/160] Generate embedded Metal library for ssm
+[53/160] Generate embedded Metal library for wkv
+[54/160] Generate embedded Metal library for rope
+[55/160] Generate embedded Metal library for gated_delta_net
+[56/160] Generate embedded Metal library for conv
+[57/160] Generate embedded Metal library for upscale
+[58/160] Generate embedded Metal library for argsort
+[59/160] Generate embedded Metal library for pool
+[60/160] Generate embedded Metal library for misc
+[61/160] Linking CXX static library ggml/src/ggml-blas/libggml-blas.a
+[62/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-fa.s.o
+[63/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-mul_mv.s.o
+[64/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-mul_mm.s.o
+[65/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-quantize.s.o
+[66/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-softmax.s.o
+[67/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-norm.s.o
+[68/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-unary.s.o
+[69/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-binbcast.s.o
+[70/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-reduce.s.o
+[71/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-tri.s.o
+[72/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-ssm.s.o
+[73/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-wkv.s.o
+[74/160] Building CXX object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/ggml-metal-tuning.cpp.o
+[75/160] Building C object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/ggml-metal-context.m.o
+[76/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-gated_delta_net.s.o
+[77/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-solve_tri.s.o
+[78/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-rope.s.o
+[79/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-conv.s.o
+[80/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-upscale.s.o
+[81/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-argsort.s.o
+[82/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-pool.s.o
+[83/160] Building ASM object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/autogenerated/ggml-metal-embed-misc.s.o
+[84/160] Building C object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/ggml-metal-device.m.o
+[85/160] Building CXX object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/ggml-metal.cpp.o
+[86/160] Building CXX object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/ggml-metal-common.cpp.o
+[87/160] Building CXX object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/ggml-metal-device.cpp.o
+[88/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/conditioning/wan_audio.cpp.o
+[89/160] Building CXX object ggml/src/CMakeFiles/ggml.dir/ggml-backend-dl.cpp.o
+[90/160] Building CXX object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/ggml-metal-fusion.cpp.o
+[91/160] Building CXX object ggml/src/ggml-metal/CMakeFiles/ggml-metal.dir/ggml-metal-ops.cpp.o
+[92/160] Linking CXX static library ggml/src/ggml-metal/libggml-metal.a
+[93/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/ggml_extend.cpp.o
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/ggml_extend.cpp:226:13: warning: 'ggml_mul_mat_set_prec' is deprecated: use ggml_prec_set_acc() instead [-Wdeprecated-declarations]
+  226 |             ggml_mul_mat_set_prec(x, GGML_PREC_F32);
+      |             ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/../include/ggml.h:1503:5: note: 'ggml_mul_mat_set_prec' has been explicitly marked deprecated here
+ 1503 |     GGML_DEPRECATED(GGML_API void ggml_mul_mat_set_prec(
+      |     ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/../include/ggml.h:192:61: note: expanded from macro 'GGML_DEPRECATED'
+  192 | #    define GGML_DEPRECATED(func, hint) func __attribute__((deprecated(hint)))
+      |                                                             ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/ggml_extend.cpp:232:13: warning: 'ggml_mul_mat_set_prec' is deprecated: use ggml_prec_set_acc() instead [-Wdeprecated-declarations]
+  232 |             ggml_mul_mat_set_prec(x, GGML_PREC_F32);
+      |             ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/../include/ggml.h:1503:5: note: 'ggml_mul_mat_set_prec' has been explicitly marked deprecated here
+ 1503 |     GGML_DEPRECATED(GGML_API void ggml_mul_mat_set_prec(
+      |     ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/../include/ggml.h:192:61: note: expanded from macro 'GGML_DEPRECATED'
+  192 | #    define GGML_DEPRECATED(func, hint) func __attribute__((deprecated(hint)))
+      |                                                             ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/ggml_extend.cpp:491:9: warning: 'ggml_mul_mat_set_prec' is deprecated: use ggml_prec_set_acc() instead [-Wdeprecated-declarations]
+  491 |         ggml_mul_mat_set_prec(x, GGML_PREC_F32);
+      |         ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/../include/ggml.h:1503:5: note: 'ggml_mul_mat_set_prec' has been explicitly marked deprecated here
+ 1503 |     GGML_DEPRECATED(GGML_API void ggml_mul_mat_set_prec(
+      |     ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/../include/ggml.h:192:61: note: expanded from macro 'GGML_DEPRECATED'
+  192 | #    define GGML_DEPRECATED(func, hint) func __attribute__((deprecated(hint)))
+      |                                                             ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/ggml_extend.cpp:724:9: warning: 'ggml_flash_attn_ext_set_prec' is deprecated: use ggml_prec_set_acc() instead [-Wdeprecated-declarations]
+  724 |         ggml_flash_attn_ext_set_prec(out, GGML_PREC_F32);
+      |         ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/../include/ggml.h:2542:5: note: 'ggml_flash_attn_ext_set_prec' has been explicitly marked deprecated here
+ 2542 |     GGML_DEPRECATED(GGML_API void ggml_flash_attn_ext_set_prec(
+      |     ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/../include/ggml.h:192:61: note: expanded from macro 'GGML_DEPRECATED'
+  192 | #    define GGML_DEPRECATED(func, hint) func __attribute__((deprecated(hint)))
+      |                                                             ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/ggml_extend.cpp:800:9: warning: 'ggml_mul_mat_set_prec' is deprecated: use ggml_prec_set_acc() instead [-Wdeprecated-declarations]
+  800 |         ggml_mul_mat_set_prec(kq, GGML_PREC_F32);
+      |         ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/../include/ggml.h:1503:5: note: 'ggml_mul_mat_set_prec' has been explicitly marked deprecated here
+ 1503 |     GGML_DEPRECATED(GGML_API void ggml_mul_mat_set_prec(
+      |     ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/../include/ggml.h:192:61: note: expanded from macro 'GGML_DEPRECATED'
+  192 | #    define GGML_DEPRECATED(func, hint) func __attribute__((deprecated(hint)))
+      |                                                             ^
+5 warnings generated.
+[94/160] Building CXX object ggml/src/CMakeFiles/ggml.dir/ggml-backend-reg.cpp.o
+[95/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/parallel.cpp.o
+[96/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/compute_workspace.cpp.o
+[97/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/ggml_tensor_utils.cpp.o
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/ggml_tensor_utils.cpp:20:88: warning: format specifies type 'size_t' (aka 'unsigned long') but the argument has type 'int64_t' (aka 'long long') [-Wformat]
+   20 |     printf("%s (%s): shape(%zu, %zu, %zu, %zu)\n", mark, ggml_type_name(tensor->type), tensor->ne[0], tensor->ne[1], tensor->ne[2], tensor->ne[3]);
+      |                            ~~~                                                         ^~~~~~~~~~~~~
+      |                            %lld
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/ggml_tensor_utils.cpp:20:103: warning: format specifies type 'size_t' (aka 'unsigned long') but the argument has type 'int64_t' (aka 'long long') [-Wformat]
+   20 |     printf("%s (%s): shape(%zu, %zu, %zu, %zu)\n", mark, ggml_type_name(tensor->type), tensor->ne[0], tensor->ne[1], tensor->ne[2], tensor->ne[3]);
+      |                                 ~~~                                                                   ^~~~~~~~~~~~~
+      |                                 %lld
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/ggml_tensor_utils.cpp:20:118: warning: format specifies type 'size_t' (aka 'unsigned long') but the argument has type 'int64_t' (aka 'long long') [-Wformat]
+   20 |     printf("%s (%s): shape(%zu, %zu, %zu, %zu)\n", mark, ggml_type_name(tensor->type), tensor->ne[0], tensor->ne[1], tensor->ne[2], tensor->ne[3]);
+      |                                      ~~~                                                                             ^~~~~~~~~~~~~
+      |                                      %lld
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/ggml_tensor_utils.cpp:20:133: warning: format specifies type 'size_t' (aka 'unsigned long') but the argument has type 'int64_t' (aka 'long long') [-Wformat]
+   20 |     printf("%s (%s): shape(%zu, %zu, %zu, %zu)\n", mark, ggml_type_name(tensor->type), tensor->ne[0], tensor->ne[1], tensor->ne[2], tensor->ne[3]);
+      |                                           ~~~                                                                                       ^~~~~~~~~~~~~
+      |                                           %lld
+4 warnings generated.
+[98/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/ggml_extend_backend.cpp.o
+[99/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/backend_fit.cpp.o
+[100/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/regex.cpp.o
+[101/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/layer_split_partition.cpp.o
+[102/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/convert.cpp.o
+[103/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/runner_cache.cpp.o
+[104/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/segment_graph_bindings.cpp.o
+[105/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/segment_weight_pipeline.cpp.o
+[106/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/ggml_runner.cpp.o
+[107/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/model/adapter/lora_ops.cpp.o
+[108/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/ggml_graph_cut.cpp.o
+[109/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_io/gguf_io.cpp.o
+[110/160] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ops.cpp.o
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/ops.cpp:5941:13: warning: enumeration values 'GGML_TYPE_F8_E4M3' and 'GGML_TYPE_F8_E5M2' not handled in switch [-Wswitch]
+ 5941 |     switch (src0->type) {
+      |             ^~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/ops.cpp:5941:13: note: add missing switch cases
+ 5941 |     switch (src0->type) {
+      |             ^
+1 warning generated.
+[111/160] Linking CXX static library ggml/src/libggml-cpu.a
+[112/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_io/torch_zip_io.cpp.o
+[113/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_io/torch_legacy_io.cpp.o
+[114/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_io/pickle_io.cpp.o
+[115/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/extensions/pulid_extension.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/extensions/pulid_extension.cpp:1:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/extensions/generation_extension.h:11:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[116/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_manager_prefetch.cpp.o
+[117/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_loader_files.cpp.o
+[118/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/core/util.cpp.o
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/util.cpp:374:31: warning: 'codecvt_utf8<char32_t>' is deprecated [-Wdeprecated-declarations]
+  374 |     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
+      |                               ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/codecvt:199:7: note: 'codecvt_utf8<char32_t>' has been explicitly marked deprecated here
+  199 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8 : public __codecvt_utf8<_Elem> {
+      |       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:540:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  540 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:504:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  504 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/util.cpp:374:10: warning: 'wstring_convert<std::codecvt_utf8<char32_t>, char32_t>' is deprecated [-Wdeprecated-declarations]
+  374 |     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
+      |          ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__locale_dir/wstring_convert.h:34:7: note: 'wstring_convert<std::codecvt_utf8<char32_t>, char32_t>' has been explicitly marked deprecated here
+   34 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:540:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  540 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:504:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  504 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/util.cpp:379:31: warning: 'codecvt_utf8<char32_t>' is deprecated [-Wdeprecated-declarations]
+  379 |     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
+      |                               ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/codecvt:199:7: note: 'codecvt_utf8<char32_t>' has been explicitly marked deprecated here
+  199 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8 : public __codecvt_utf8<_Elem> {
+      |       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:540:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  540 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:504:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  504 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/util.cpp:379:10: warning: 'wstring_convert<std::codecvt_utf8<char32_t>, char32_t>' is deprecated [-Wdeprecated-declarations]
+  379 |     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
+      |          ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__locale_dir/wstring_convert.h:34:7: note: 'wstring_convert<std::codecvt_utf8<char32_t>, char32_t>' has been explicitly marked deprecated here
+   34 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:540:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  540 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:504:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  504 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/util.cpp:1:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/util.h:8:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/vector:363:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/locale:203:
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__locale_dir/wstring_convert.h:179:1: warning: 'wstring_convert<std::codecvt_utf8<char32_t>, char32_t>' is deprecated [-Wdeprecated-declarations]
+  179 | wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* __frm, const _Elem* __frm_end) {
+      | ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__locale_dir/wstring_convert.h:83:12: note: in instantiation of member function 'std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t>::to_bytes' requested here
+   83 |     return to_bytes(__wstr.data(), __wstr.data() + __wstr.size());
+      |            ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/core/util.cpp:380:22: note: in instantiation of member function 'std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t>::to_bytes' requested here
+  380 |     return converter.to_bytes(utf32_str);
+      |                      ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__locale_dir/wstring_convert.h:34:7: note: 'wstring_convert<std::codecvt_utf8<char32_t>, char32_t>' has been explicitly marked deprecated here
+   34 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:540:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  540 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:504:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  504 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+5 warnings generated.
+[119/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_manager_files.cpp.o
+[120/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_io/safetensors_io.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model_io/safetensors_io.cpp:16:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[121/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/detailer.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/detailer.cpp:13:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[122/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/extensions/photomaker_extension.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/extensions/photomaker_extension.cpp:2:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/extensions/generation_extension.h:11:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[123/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/runtime/audio_processing.cpp.o
+[124/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/pipeline/request.cpp.o
+[125/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_loader.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model_loader.cpp:31:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[126/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/runtime/guidance.cpp.o
+[127/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/model_manager.cpp.o
+[128/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/runtime/image_preprocess.cpp.o
+[129/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/name_conversion.cpp.o
+[130/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/runtime/imatrix.cpp.o
+[131/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/runtime/tiling.cpp.o
+[132/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/bpe_tokenizer.cpp.o
+[133/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/runtime/sample-cache.cpp.o
+[134/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/pipeline/image.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/image.cpp:1:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/generation.h:4:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/image.cpp:10:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:368:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  368 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:189:17: note: overridden virtual function is here
+  189 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+5 warnings generated.
+[135/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/clip_tokenizer.cpp.o
+[136/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/sensenova_u1_tokenizer.cpp.o
+[137/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/qwen2_tokenizer.cpp.o
+[138/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/gemma_tokenizer.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/tokenizers/gemma_tokenizer.cpp:5:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[139/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/tokenize_util.cpp.o
+[140/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/stable-diffusion.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/stable-diffusion.cpp:11:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/generation.h:4:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[141/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/tokenizer_config.cpp.o
+[142/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/version.cpp.o
+[143/160] Linking CXX static library ggml/src/libggml.a
+[144/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/mistral_tokenizer.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/tokenizers/mistral_tokenizer.cpp:5:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[145/160] Building CXX object examples/cli/CMakeFiles/sd-cli.dir/__/common/log.cpp.o
+[146/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/tokenizer.cpp.o
+[147/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/hf_tokenizer.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/tokenizers/hf_tokenizer.cpp:16:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[148/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/upscaler.cpp.o
+[149/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/pipeline/video.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/video.cpp:1:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/generation.h:4:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/video.cpp:15:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:368:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  368 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:189:17: note: overridden virtual function is here
+  189 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+5 warnings generated.
+[150/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/t5_unigram_tokenizer.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/tokenizers/t5_unigram_tokenizer.cpp:10:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[151/160] Building CXX object examples/cli/CMakeFiles/sd-cli.dir/image_metadata.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/examples/cli/image_metadata.cpp:17:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[152/160] Building CXX object examples/cli/CMakeFiles/sd-cli.dir/main.cpp.o
+[153/160] Building CXX object examples/cli/CMakeFiles/sd-cli.dir/__/common/media_io.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/examples/common/media_io.cpp:22:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_write.h:780:13: warning: 'sprintf' is deprecated: This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead. [-Wdeprecated-declarations]
+  780 |       len = sprintf(buffer, "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
+      |             ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_stdio.h:278:1: note: 'sprintf' has been explicitly marked deprecated here
+  278 | __deprecated_msg("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of sprintf(3), it is highly recommended that you use snprintf(3) instead.")
+      | ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/cdefs.h:227:48: note: expanded from macro '__deprecated_msg'
+  227 |         #define __deprecated_msg(_msg) __attribute__((__deprecated__(_msg)))
+      |                                                       ^
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/examples/common/media_io.cpp:26:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:760:31: warning: expression result unused [-Wunused-value]
+  760 |     STBIR__DEBUG_ASSERT(scale <= 1);
+      |                         ~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:778:31: warning: expression result unused [-Wunused-value]
+  778 |     STBIR__DEBUG_ASSERT(scale <= 1);
+      |                         ~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1041:56: warning: expression result unused [-Wunused-value]
+ 1041 |     STBIR__DEBUG_ASSERT(in_last_pixel - in_first_pixel <= (int)ceil(stbir__filter_info_table[filter].support(1/scale) * 2)); // Taken directly from stbir__get_coefficient_width() which we can't call because we don't know if we're horizontal or vertical.
+      |                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1046:41: warning: expression result unused [-Wunused-value]
+ 1046 |     STBIR__DEBUG_ASSERT(contributor->n1 >= contributor->n0);
+      |                         ~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1064:128: warning: expression result unused [-Wunused-value]
+ 1064 |     STBIR__DEBUG_ASSERT(stbir__filter_info_table[filter].kernel((float)(in_last_pixel + 1) + 0.5f - in_center_of_out, 1/scale) == 0);
+      |                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1066:38: warning: expression result unused [-Wunused-value]
+ 1066 |     STBIR__DEBUG_ASSERT(total_filter > 0.9);
+      |                         ~~~~~~~~~~~~ ^ ~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1067:38: warning: expression result unused [-Wunused-value]
+ 1067 |     STBIR__DEBUG_ASSERT(total_filter < 1.1f); // Make sure it's not way off.
+      |                         ~~~~~~~~~~~~ ^ ~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1089:59: warning: expression result unused [-Wunused-value]
+ 1089 |      STBIR__DEBUG_ASSERT(out_last_pixel - out_first_pixel <= (int)ceil(stbir__filter_info_table[filter].support(scale_ratio) * 2)); // Taken directly from stbir__get_coefficient_width() which we can't call because we don't know if we're horizontal or vertical.
+      |                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1094:41: warning: expression result unused [-Wunused-value]
+ 1094 |     STBIR__DEBUG_ASSERT(contributor->n1 >= contributor->n0);
+      |                         ~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1103:133: warning: expression result unused [-Wunused-value]
+ 1103 |     STBIR__DEBUG_ASSERT(stbir__filter_info_table[filter].kernel((float)(out_last_pixel + 1) + 0.5f - out_center_of_in, scale_ratio) == 0);
+      |                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1138:35: warning: expression result unused [-Wunused-value]
+ 1138 |         STBIR__DEBUG_ASSERT(total > 0.9f);
+      |                             ~~~~~ ^ ~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1139:35: warning: expression result unused [-Wunused-value]
+ 1139 |         STBIR__DEBUG_ASSERT(total < 1.1f);
+      |                             ~~~~~ ^ ~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1427:47: warning: expression result unused [-Wunused-value]
+ 1427 |         STBIR__DEBUG_ASSERT(ring_buffer_index != stbir_info->ring_buffer_begin_index);
+      |                             ~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1459:32: warning: expression result unused [-Wunused-value]
+ 1459 |         STBIR__DEBUG_ASSERT(n1 >= n0);
+      |                             ~~ ^  ~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1460:32: warning: expression result unused [-Wunused-value]
+ 1460 |         STBIR__DEBUG_ASSERT(n0 >= -stbir_info->horizontal_filter_pixel_margin);
+      |                             ~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1461:32: warning: expression result unused [-Wunused-value]
+ 1461 |         STBIR__DEBUG_ASSERT(n1 >= -stbir_info->horizontal_filter_pixel_margin);
+      |                             ~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1462:32: warning: expression result unused [-Wunused-value]
+ 1462 |         STBIR__DEBUG_ASSERT(n0 < stbir_info->input_w + stbir_info->horizontal_filter_pixel_margin);
+      |                             ~~ ^ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1463:32: warning: expression result unused [-Wunused-value]
+ 1463 |         STBIR__DEBUG_ASSERT(n1 < stbir_info->input_w + stbir_info->horizontal_filter_pixel_margin);
+      |                             ~~ ^ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1471:53: warning: expression result unused [-Wunused-value]
+ 1471 |                     STBIR__DEBUG_ASSERT(coefficient != 0);
+      |                                         ~~~~~~~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1480:53: warning: expression result unused [-Wunused-value]
+ 1480 |                     STBIR__DEBUG_ASSERT(coefficient != 0);
+      |                                         ~~~~~~~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1490:53: warning: expression result unused [-Wunused-value]
+ 1490 |                     STBIR__DEBUG_ASSERT(coefficient != 0);
+      |                                         ~~~~~~~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1501:53: warning: expression result unused [-Wunused-value]
+ 1501 |                     STBIR__DEBUG_ASSERT(coefficient != 0);
+      |                                         ~~~~~~~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1514:53: warning: expression result unused [-Wunused-value]
+ 1514 |                     STBIR__DEBUG_ASSERT(coefficient != 0);
+      |                                         ~~~~~~~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1537:25: warning: expression result unused [-Wunused-value]
+ 1537 |     STBIR__DEBUG_ASSERT(!stbir__use_width_upsampling(stbir_info));
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1555:53: warning: expression result unused [-Wunused-value]
+ 1555 |                     STBIR__DEBUG_ASSERT(coefficient != 0);
+      |                                         ~~~~~~~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1576:53: warning: expression result unused [-Wunused-value]
+ 1576 |                     STBIR__DEBUG_ASSERT(coefficient != 0);
+      |                                         ~~~~~~~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1598:53: warning: expression result unused [-Wunused-value]
+ 1598 |                     STBIR__DEBUG_ASSERT(coefficient != 0);
+      |                                         ~~~~~~~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1621:53: warning: expression result unused [-Wunused-value]
+ 1621 |                     STBIR__DEBUG_ASSERT(coefficient != 0);
+      |                                         ~~~~~~~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:1646:53: warning: expression result unused [-Wunused-value]
+ 1646 |                     STBIR__DEBUG_ASSERT(coefficient != 0);
+      |                                         ~~~~~~~~~~~ ^  ~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:2005:25: warning: expression result unused [-Wunused-value]
+ 2005 |     STBIR__DEBUG_ASSERT(!stbir__use_height_upsampling(stbir_info));
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:2079:66: warning: expression result unused [-Wunused-value]
+ 2079 |         STBIR__DEBUG_ASSERT(in_last_scanline - in_first_scanline <= stbir_info->vertical_filter_pixel_width);
+      |                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:2171:25: warning: expression result unused [-Wunused-value]
+ 2171 |     STBIR__DEBUG_ASSERT(!stbir__use_height_upsampling(stbir_info));
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:2180:68: warning: expression result unused [-Wunused-value]
+ 2180 |         STBIR__DEBUG_ASSERT(out_last_scanline - out_first_scanline <= stbir_info->vertical_filter_pixel_width);
+      |                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:2382:92: warning: expression result unused [-Wunused-value]
+ 2382 |         STBIR__DEBUG_ASSERT((size_t)STBIR__NEXT_MEMPTR(info->encode_buffer, unsigned char) == (size_t)tempmem + tempmem_size_in_bytes);
+      |                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/stb_image_resize.h:2390:90: warning: expression result unused [-Wunused-value]
+ 2390 |         STBIR__DEBUG_ASSERT((size_t)STBIR__NEXT_MEMPTR(info->ring_buffer, unsigned char) == (size_t)tempmem + tempmem_size_in_bytes);
+      |                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+36 warnings generated.
+[154/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/pipeline/diffusion_engine.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/diffusion_engine.cpp:32:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/diffusion_engine.cpp:43:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/ltx_vae.hpp:15:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:368:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  368 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:189:17: note: overridden virtual function is here
+  189 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/diffusion_engine.cpp:43:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/ltx_vae.hpp:16:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/wan_vae.hpp:1441:13: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+ 1441 |         int get_encoder_output_channels(int input_channels) {
+      |             ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:189:17: note: overridden virtual function is here
+  189 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+6 warnings generated.
+[155/160] Building CXX object examples/cli/CMakeFiles/sd-cli.dir/__/common/common.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/examples/common/common.cpp:17:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+4 warnings generated.
+[156/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/pipeline/model_builders.cpp.o
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:7:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/conditioning/conditioner.hpp:18:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/te/llm.hpp:28:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24314:35: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24314 | inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+       |                       ~~~~~~~~~~~~^~~~~
+       |                       operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24322:49: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24322 | inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+       |                                     ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                     operator""_json_pointer
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24386:58: warning: identifier '_json' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24386 |     using nlohmann::literals::json_literals::operator "" _json; // NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~
+       |                                              operator""_json
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/thirdparty/json.hpp:24387:58: warning: identifier '_json_pointer' preceded by whitespace in a literal operator declaration is deprecated [-Wdeprecated-literal-operator]
+ 24387 |     using nlohmann::literals::json_literals::operator "" _json_pointer; //NOLINT(misc-unused-using-decls,google-global-names-in-headers)
+       |                                              ~~~~~~~~~~~~^~~~~~~~~~~~~
+       |                                              operator""_json_pointer
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:23:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/diffusion/lingbot_video.hpp:373:22: warning: 'forward' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  373 |         ggml_tensor* forward(GGMLRunnerContext* ctx, ggml_tensor* x) {
+      |                      ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/common/ggml_block.hpp:132:26: note: overridden virtual function is here
+  132 |     virtual ggml_tensor* forward(GGMLRunnerContext* ctx, ggml_tensor* x) = 0;
+      |                          ^
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:40:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/auto_encoder_kl.hpp:6:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:368:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  368 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:189:17: note: overridden virtual function is here
+  189 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:40:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/auto_encoder_kl.hpp:70:10: warning: 'init_params' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+   70 |     void init_params(ggml_context* ctx, const String2TensorStorage& tensor_storage_map = {}, const std::string prefix = "") {
+      |          ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/common/ggml_block.hpp:47:18: note: overridden virtual function is here
+   47 |     virtual void init_params(ggml_context* ctx, const String2TensorStorage& tensor_storage_map = {}, const std::string prefix = "") {}
+      |                  ^
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:40:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/auto_encoder_kl.hpp:839:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  839 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:189:17: note: overridden virtual function is here
+  189 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:41:
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/hunyuan_vae.hpp:13:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/wan_vae.hpp:1441:13: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+ 1441 |         int get_encoder_output_channels(int input_channels) {
+      |             ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:189:17: note: overridden virtual function is here
+  189 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:47:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/tae.hpp:774:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  774 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:189:17: note: overridden virtual function is here
+  189 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+In file included from /Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/pipeline/model_builders.cpp:47:
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/tae.hpp:858:9: warning: 'get_encoder_output_channels' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  858 |     int get_encoder_output_channels(int input_channels) {
+      |         ^
+/Users/abboskhuja/Flutter/hookkadr/packages/kadr_diffusion/third_party/stable-diffusion.cpp/src/model/vae/vae.hpp:189:17: note: overridden virtual function is here
+  189 |     virtual int get_encoder_output_channels(int input_channels) = 0;
+      |                 ^
+11 warnings generated.
+[157/160] Building CXX object CMakeFiles/stable-diffusion.dir/src/tokenizers/vocab/vocab.cpp.o
+[158/160] Linking CXX static library libstable-diffusion.a
+[159/160] Linking CXX executable bin/sd-cli

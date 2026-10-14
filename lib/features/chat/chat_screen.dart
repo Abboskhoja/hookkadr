@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
@@ -18,7 +19,7 @@ import '../../core/format.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/semantic_colors.dart';
 import '../../core/widgets/brand_logo.dart';
-import '../../core/widgets/option_pill.dart';
+import '../../core/widgets/light_markdown.dart';
 import '../../core/widgets/render_player.dart';
 import '../../core/widgets/poster.dart';
 import '../ai/ai_clients.dart';
@@ -33,12 +34,17 @@ import '../render/export_sheet.dart';
 import '../render/media_analyzer.dart';
 import '../render/render_service.dart';
 import '../montage/application/montage_service.dart';
-import '../montage/presentation/montage_screen.dart';
 import '../editor/editor_screen.dart';
+import '../kadr_ai/kadr_memory.dart';
+import '../kadr_ai/kadr_painter.dart';
+import '../kadr_ai/kadr_video_maker.dart';
+import '../product_ad/data/ad_output_check.dart';
+import '../product_ad/data/music_synth.dart';
 import '../projects/project.dart';
 import '../projects/projects_screen.dart';
 import '../settings/connections_screen.dart';
-import '../settings/first_run_sheet.dart';
+import '../settings/settings_screen.dart';
+import '../montage/output_format.dart';
 import 'chat_models.dart';
 
 class _Clip {
@@ -62,10 +68,55 @@ String _dur(double s) {
   return '$m:${r.toString().padLeft(2, '0')}';
 }
 
-/// Home screen: the chat IS the product. Every message works inside the
-/// context of the active project and its attached clips.
+/// What the user picked on the home screen; null means Kadr AI decides.
+enum KadrMode {
+  video(
+    'Video yaratish',
+    'Matndan video',
+    LucideIcons.clapperboard,
+    AppColors.blueLight,
+  ),
+  image('Rasm yaratish', 'Reklama, poster', LucideIcons.image, AppColors.coral),
+  montage(
+    'Montaj qilish',
+    'O‘z videolaringizdan',
+    LucideIcons.scissors,
+    AppColors.brand,
+  ),
+  question(
+    'Savol berish',
+    'Maslahat, g‘oya, matn',
+    LucideIcons.messageCircle,
+    AppColors.success,
+  );
+
+  const KadrMode(this.title, this.hint, this.icon, this.color);
+  final String title;
+  final String hint;
+  final IconData icon;
+  final Color color;
+}
+
+/// A request from elsewhere in the app ("Home → Videodan montaj") that the
+/// chat should start: a mode, optional text and output settings.
+class KadrRequest {
+  const KadrRequest(this.mode, {this.text = '', this.aspect, this.seconds});
+  final KadrMode? mode;
+  final String text;
+  final String? aspect;
+  final int? seconds;
+}
+
+/// Kadr AI chat. Every message works inside the context of the active
+/// project and its attached clips.
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  const ChatScreen({super.key, this.onOpenProjects, this.requests});
+
+  /// Switches to the projects tab when the chat lives in [HomeShell].
+  final VoidCallback? onOpenProjects;
+
+  /// Requests pushed by other screens; each new value starts that task.
+  final ValueListenable<KadrRequest?>? requests;
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
@@ -83,6 +134,28 @@ class _ChatScreenState extends State<ChatScreen> {
   int _duration = 30;
   bool _busy = false;
   bool _autoRender = true;
+  KadrMode? _mode;
+
+  /// Painter style the user picked; null = what Kadr AI learned they like.
+  PaintStyle? _style;
+  bool _learnedDefaults = false;
+
+  PaintStyle _styleFor(AppController app) =>
+      _style ?? app.memory.preferredStyle ?? PaintStyle.photo;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_learnedDefaults) return;
+    _learnedDefaults = true;
+    // Start in the format this user uses most.
+    final aspect = AppScope.of(context).memory.preferredAspect;
+    if (aspect != null) _aspect = aspect;
+  }
+
+  /// Reply being written right now by on-device Kadr AI (token stream).
+  String? _live;
+  final _focus = FocusNode();
   List<ActivityStep>? _steps;
 
   List<Msg> get _msgs => _chat?.messages ?? const [];
@@ -90,16 +163,31 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final app = AppScope.of(context);
-      if (!app.onboardingDone && !app.aiReady) {
-        showFirstRunSheet(context).then((_) => app.markOnboardingDone());
-      }
+    widget.requests?.addListener(_onRequest);
+  }
+
+  void _onRequest() {
+    final r = widget.requests?.value;
+    if (r == null || !mounted) return;
+    setState(() {
+      _chat = null;
+      _clips.clear();
+      _mode = r.mode;
+      _c.text = r.text;
+      if (r.aspect != null) _aspect = r.aspect!;
+      if (r.seconds != null) _duration = r.seconds!;
     });
+    if (r.mode == KadrMode.montage) {
+      _pickVideos();
+    } else {
+      _focus.requestFocus();
+    }
   }
 
   @override
   void dispose() {
+    widget.requests?.removeListener(_onRequest);
+    _focus.dispose();
     _c.dispose();
     _scroll.dispose();
     super.dispose();
@@ -156,8 +244,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  String get _settingsSummary => '$_aspect · $_duration s · $_resolution';
-
   void _showAttachMenu() => showModalBottomSheet<void>(
     context: context,
     builder: (ctx) => SafeArea(
@@ -185,98 +271,132 @@ class _ChatScreenState extends State<ChatScreen> {
                 _recordVideo();
               },
             ),
-            ListTile(
-              leading: const Icon(LucideIcons.settings2),
-              title: const Text('Video sozlamalari'),
-              subtitle: Text(_settingsSummary),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showVideoSettings();
-              },
-            ),
           ],
         ),
       ),
     ),
   );
 
-  void _showVideoSettings() => showModalBottomSheet<void>(
+  void _showFormatSheet() => showModalBottomSheet<void>(
     context: context,
+    isScrollControlled: true,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setSheet) {
-        Widget group(
-          String title,
-          List<String> values,
-          String current,
-          void Function(String) pick,
-        ) => Padding(
-          padding: const EdgeInsets.only(bottom: 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: AppText.caption(ctx)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final v in values)
-                    ChoiceChip(
-                      label: Text(v),
-                      selected: v == current,
-                      onSelected: (_) {
-                        setState(() => pick(v));
-                        setSheet(() {});
-                      },
-                    ),
-                ],
-              ),
-            ],
-          ),
-        );
+        final pro = AppScope.of(context).proMode;
+        final p = ctx.palette;
+        void set(VoidCallback f) {
+          setState(f);
+          setSheet(() {});
+        }
+
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Video sozlamalari', style: AppText.title(ctx)),
-                const SizedBox(height: 16),
-                group(
-                  'Format',
-                  const ['9:16', '16:9', '1:1', '4:5'],
-                  _aspect,
-                  (v) => _aspect = v,
-                ),
-                group(
-                  'Davomiylik',
-                  const ['15 s', '30 s', '45 s', '60 s'],
-                  '$_duration s',
-                  (v) => _duration = int.parse(v.split(' ').first),
-                ),
-                group(
-                  'Sifat',
-                  const ['720p', '1080p', '4K'],
-                  _resolution,
-                  (v) => _resolution = v,
-                ),
-                group(
-                  'Platforma',
-                  const ['TikTok', 'Reels', 'Shorts'],
-                  _platform,
-                  (v) => _platform = v,
-                ),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Avto-render'),
-                  subtitle: const Text(
-                    'Reja tayyor bo‘lishi bilan MP4 darhol yasaladi',
+                Text('Qanday bo‘lsin?', style: AppText.title(ctx)),
+                const SizedBox(height: 12),
+                for (final f in OutputFormat.all)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      f.aspect == '16:9'
+                          ? LucideIcons.monitor
+                          : f.aspect == '9:16'
+                          ? LucideIcons.smartphone
+                          : LucideIcons.square,
+                      color: f.aspect == _aspect ? p.accent : p.textSecondary,
+                    ),
+                    title: Text(f.label),
+                    subtitle: Text(f.hint),
+                    trailing: f.aspect == _aspect
+                        ? Icon(LucideIcons.check, color: p.accent)
+                        : null,
+                    onTap: () {
+                      set(() {
+                        _aspect = f.aspect;
+                        _platform = f.platform;
+                      });
+                      AppScope.of(context).memory.choseAspect(f.aspect);
+                    },
                   ),
-                  value: _autoRender,
-                  onChanged: (v) {
-                    setState(() => _autoRender = v);
-                    setSheet(() {});
-                  },
+                if (AppScope.of(context).painterInstalled &&
+                    _mode != KadrMode.montage &&
+                    _mode != KadrMode.question) ...[
+                  const SizedBox(height: 12),
+                  Text('Uslub', style: AppText.caption(ctx)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final st in PaintStyle.values)
+                        ChoiceChip(
+                          label: Text(st.label),
+                          selected: st == _styleFor(AppScope.of(context)),
+                          onSelected: (_) {
+                            set(() => _style = st);
+                            AppScope.of(context).memory.choseStyle(st);
+                          },
+                        ),
+                    ],
+                  ),
+                ],
+                if (_mode != KadrMode.image) ...[
+                  const SizedBox(height: 12),
+                  Text('Uzunligi', style: AppText.caption(ctx)),
+                  const SizedBox(height: 8),
+                  SegmentedButton<int>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: 15, label: Text('15 soniya')),
+                      ButtonSegment(value: 30, label: Text('30 soniya')),
+                      ButtonSegment(value: 60, label: Text('1 daqiqa')),
+                    ],
+                    selected: {_duration},
+                    emptySelectionAllowed: true,
+                    onSelectionChanged: (v) {
+                      if (v.isNotEmpty) set(() => _duration = v.first);
+                    },
+                  ),
+                ],
+                if (pro) ...[
+                  const SizedBox(height: 18),
+                  Text('Sifat (Pro)', style: AppText.caption(ctx)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final r in const ['720p', '1080p', '4K'])
+                        ChoiceChip(
+                          label: Text(r),
+                          selected: r == _resolution,
+                          onSelected: (_) => set(() => _resolution = r),
+                        ),
+                    ],
+                  ),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Avto-render'),
+                    subtitle: const Text(
+                      'Reja tayyor bo‘lishi bilan MP4 yasaladi',
+                    ),
+                    value: _autoRender,
+                    onChanged: (v) => set(() => _autoRender = v),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                    ),
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Tayyor'),
+                  ),
                 ),
               ],
             ),
@@ -285,6 +405,16 @@ class _ChatScreenState extends State<ChatScreen> {
       },
     ),
   );
+
+  /// Home tile tapped: remember what the user wants and get them started.
+  void _selectMode(KadrMode m) {
+    setState(() => _mode = m);
+    if (m == KadrMode.montage) {
+      _pickVideos();
+    } else {
+      _focus.requestFocus();
+    }
+  }
 
   Future<void> _loadMeta(_Clip c) async {
     try {
@@ -357,28 +487,41 @@ class _ChatScreenState extends State<ChatScreen> {
     return ok == true;
   }
 
-  /// Returns 'veo', 'images' or null (cancelled).
+  /// Returns 'local' / 'live' (Kadr AI on the phone), 'images', 'veo', or
+  /// null (cancelled).
   Future<String?> _chooseVideoMethod(AppController app) async {
+    final local = app.painterInstalled;
+    final live = app.motionInstalled;
     final hasGemini = app.isConnected(ProviderKind.gemini);
-    final hasImages = hasGemini || app.isConnected(ProviderKind.openai);
-    if (!hasGemini && !hasImages) {
+    final hasImages =
+        !local && (hasGemini || app.isConnected(ProviderKind.openai));
+    if (!local && !hasGemini && !hasImages) {
       throw const AiException(
-        'AI video/rasm yaratish uchun Gemini yoki OpenAI ulang. Telefonning '
-        'o‘zida generatsiya yo‘q, lekin kliplaringizdan offline montaj qilish mumkin.',
+        'Video yaratish uchun Kadr AI rassomini telefonga o‘rnating: Profil → '
+        'Kadr AI telefonda → Rassom. Bir marta yuklanadi, keyin internetsiz ishlaydi. '
+        'O‘z kliplaringizdan montaj esa hozir ham ishlaydi.',
       );
     }
+    // Only one way: no question to ask.
+    if (local && !live && !hasGemini) return 'local';
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('AI video qanday yaratilsin?'),
+        title: const Text('Video qanday yaratilsin?'),
         content: Text(
           [
-            if (hasGemini)
-              'Veo: haqiqiy AI video (${GeminiClient.videoModel}). Pullik, bir necha daqiqa.',
+            if (local)
+              'Telefonda: Kadr AI ssenariy yozadi, har sahnani chizadi, zoom, '
+                  'subtitr va musiqa bilan videoga yig‘adi. Internetsiz, bepul.',
+            if (live)
+              'Telefonda, jonli: har sahna 2,7 soniyalik harakatli klipga '
+                  'aylanadi. Sekinroq — telefonga qarab bir necha daqiqa.',
             if (hasImages)
-              'Rasmlardan video: har sahna uchun AI rasm chiziladi, so‘ng zoom va '
-                  'subtitr bilan videoga yig‘iladi. Arzonroq va tezroq; montaj telefonda.',
-            'Pullik xizmat sizning provider hisobingizdan olinadi.',
+              'Rasmlardan video (bulutda): har sahna uchun AI rasm chiziladi, so‘ng '
+                  'zoom va subtitr bilan videoga yig‘iladi. Pullik provider hisobidan.',
+            if (hasGemini)
+              'Veo (bulutda): AI video (${GeminiClient.videoModel}). Pullik, bir '
+                  'necha daqiqa.',
           ].join('\n\n'),
         ),
         actions: [
@@ -386,10 +529,20 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Bekor'),
           ),
+          if (local)
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'local'),
+              child: const Text('Telefonda'),
+            ),
+          if (live)
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'live'),
+              child: const Text('Jonli'),
+            ),
           if (hasImages)
             TextButton(
               onPressed: () => Navigator.pop(ctx, 'images'),
-              child: const Text('Rasmlardan video'),
+              child: const Text('Rasmlardan'),
             ),
           if (hasGemini)
             TextButton(
@@ -398,6 +551,45 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  /// Kadr AI on the phone: storyboard → painted (and optionally animated)
+  /// scenes → music → rendered and verified MP4.
+  Future<KadrVideoResult> _makeKadrVideo(
+    AppController app,
+    PlanGenerator gen,
+    String request, {
+    required bool live,
+  }) {
+    final painter = app.painter;
+    if (painter == null) {
+      throw const AiException('Kadr AI rassomi o‘rnatilmagan.');
+    }
+    return KadrVideoMaker(
+      repository: app,
+      renderer: RenderService(),
+      music: MusicSynth(),
+      painter: KadrPainterScenes(
+        KadrPainter(app.models, style: _styleFor(app)),
+      ),
+      storyboard: (req, sec, n) => gen.writeStoryboard(
+        request: req,
+        durationSec: sec,
+        aspectRatio: _aspect,
+        scenes: n,
+      ),
+      verify: checkAdOutput,
+    ).create(
+      request: request,
+      durationSec: _duration.clamp(10, 30),
+      live: live,
+      aspectRatio: _aspect,
+      resolution: _resolution,
+      onStage: _stage,
+      onProgress: (p) {
+        if (mounted) setState(() => _steps?.last.progress = p);
+      },
     );
   }
 
@@ -441,11 +633,24 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<String> _generateImage(AppController app, String prompt) async {
+    final painter = app.painter;
+    if (painter != null) {
+      _stage('Kadr AI rasm chizmoqda (telefonda)');
+      final file = await painter.paint(
+        prompt,
+        aspectRatio: _aspect,
+        style: _styleFor(app),
+        onProgress: (p) {
+          if (mounted) setState(() => _steps?.last.progress = p.fraction);
+        },
+      );
+      return file.path;
+    }
     final gen = app.imageGenerator;
     if (gen == null) {
       throw const AiException(
-        'Rasm yaratish uchun hisob bilan kiring (yoki Gemini/OpenAI kalitini ulang). '
-        'Telefonning o‘zida rasm generatsiyasi yo‘q.',
+        'Rasm chizish uchun Kadr AI rassomini telefonga o‘rnating: Profil → '
+        'Kadr AI telefonda → Rassom (bir marta yuklanadi, keyin internetsiz).',
       );
     }
     _stage('Rasm chizilmoqda');
@@ -466,8 +671,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final key = app.keyOf(ProviderKind.gemini);
     if (key == null) {
       throw const AiException(
-        'AI video yaratish uchun Gemini (Veo) ulang. Telefonning o‘zida video '
-        'generatsiyasi mavjud emas — lekin kliplaringizdan offline montaj qilish mumkin.',
+        'Veo uchun Gemini ulang. Telefonda video yaratish uchun esa Kadr AI '
+        'rassomini o‘rnating: Profil → Kadr AI telefonda.',
       );
     }
     final docs = await getApplicationDocumentsDirectory();
@@ -543,6 +748,15 @@ class _ChatScreenState extends State<ChatScreen> {
     return project.id;
   }
 
+  /// The user rated something Kadr AI drew: it learns the style they like.
+  Future<void> _rate(Msg m, int value) async {
+    if (m.rating == value) return;
+    final app = AppScope.of(context);
+    setState(() => m.rating = value);
+    await app.memory.rate(PaintStyle.byName(m.style), value);
+    await _persist();
+  }
+
   void _stage(String label) {
     final steps = _steps;
     if (steps == null) return;
@@ -557,14 +771,42 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _send() async {
     final text = _c.text.trim();
-    if ((text.isEmpty && _clips.isEmpty) || _busy) return;
+    if (_busy) return;
+    if (_mode == KadrMode.montage && _clips.isEmpty) {
+      await _pickVideos();
+      return;
+    }
+    if (text.isEmpty && _clips.isEmpty) return;
+    final mode = _mode;
     final app = AppScope.of(context);
     final clips = List<_Clip>.of(_clips);
+
+    // "Eslab qol: …" — Kadr AI keeps it on the phone; no model needed.
+    final fact = clips.isEmpty ? KadrMemory.factFrom(text) : null;
+    if (fact != null) {
+      await app.memory.remember(fact);
+      final chat = _ensureChat(text);
+      setState(() {
+        chat.messages
+          ..add(Msg.user(text))
+          ..add(
+            Msg.ai(
+              'Eslab qoldim: “$fact”. Endi javob, ssenariy va rasmlarda buni '
+              'hisobga olaman. Profil → Kadr AI xotirasi’da ko‘rish yoki '
+              'o‘chirish mumkin.',
+            ),
+          );
+        _c.clear();
+      });
+      await _persist();
+      _scrollDown();
+      return;
+    }
 
     final chat = _ensureChat(text.isEmpty ? 'Video montaj' : text);
     if (clips.isNotEmpty &&
         app.canWatchVideo &&
-        !clips.any((c) => c.tooLarge) &&
+        !(app.analystHasSizeLimit && clips.any((c) => c.tooLarge)) &&
         !await _confirmGemini()) {
       return;
     }
@@ -578,6 +820,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
       _c.clear();
       _clips.clear();
+      _mode = null;
     });
     _scrollDown();
 
@@ -586,7 +829,9 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(
         () => chat.messages.add(
           Msg.ai(
-            'Men hali AI’ga ulanmaganman. Biror AI ulang — keyin montaj rejasini tuzaman.',
+            'Bu ish uchun Kadr AI kerak: Profil → Kadr AI telefonda → “Miya”ni '
+            'bir marta yuklab oling, keyin internetsiz ishlaydi. O‘z videolaringizni '
+            'montaj qilish esa hozir ham ishlaydi — “Montaj qilish” ni tanlang.',
             needsAi: true,
           ),
         ),
@@ -595,11 +840,18 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
     final existing = chat.projectId == null ? null : app.byId(chat.projectId!);
-    final intent = detectIntent(
-      text,
-      hasProject: existing != null,
-      hasClips: clips.isNotEmpty,
-    );
+    final intent = clips.isNotEmpty
+        ? ChatIntent.createPlan
+        : switch (mode) {
+            KadrMode.video => ChatIntent.video,
+            KadrMode.image => ChatIntent.image,
+            KadrMode.question => ChatIntent.chat,
+            _ => detectIntent(
+              text,
+              hasProject: existing != null,
+              hasClips: false,
+            ),
+          };
     String? videoMethod;
     if (intent == ChatIntent.video) {
       try {
@@ -683,7 +935,38 @@ class _ChatScreenState extends State<ChatScreen> {
           final recent = history.length > 12
               ? history.sublist(history.length - 12)
               : history;
-          final reply = await g.converse(recent);
+          final local = app.plannerKind == ProviderKind.offline
+              ? app.localModel
+              : null;
+          final String reply;
+          if (local != null) {
+            // On-device Kadr AI: show the answer as it is written.
+            final b = StringBuffer();
+            setState(() => _live = '');
+            try {
+              await for (final t in local.stream(
+                system: [
+                  PlanGenerator.chatSystem,
+                  app.memory.promptContext(),
+                ].where((x) => x.isNotEmpty).join('\n\n'),
+                messages: recent,
+                maxTokens: 700,
+              )) {
+                b.write(t);
+                if (!mounted) return;
+                setState(() => _live = b.toString());
+                _scrollDown();
+              }
+            } finally {
+              if (mounted) setState(() => _live = null);
+            }
+            reply = b.toString().trim();
+            if (reply.isEmpty) {
+              throw const AiException('Kadr AI bo‘sh javob qaytardi.');
+            }
+          } else {
+            reply = await g.converse(recent);
+          }
           if (!mounted) return;
           setState(() {
             if (steps.isNotEmpty) steps.last.state = ActivityState.done;
@@ -697,6 +980,7 @@ class _ChatScreenState extends State<ChatScreen> {
             video: false,
             aspectRatio: _aspect,
           );
+          final drewOnPhone = app.painter != null;
           final path = await _generateImage(app, prompt);
           if (!mounted) return;
           setState(() {
@@ -704,9 +988,14 @@ class _ChatScreenState extends State<ChatScreen> {
             final u = used();
             chat.messages.add(
               Msg.ai(
-                'Rasm tayyor.',
+                drewOnPhone
+                    ? 'Rasm tayyor — telefonda chizildi '
+                          '(${_styleFor(app).label} uslubi). Yoqdimi? Bahoyingizdan '
+                          'o‘rganaman.'
+                    : 'Rasm tayyor.',
                 imagePath: path,
                 genPrompt: prompt,
+                style: drewOnPhone ? _styleFor(app).name : null,
                 tokensIn: u.i,
                 tokensOut: u.o,
               ),
@@ -714,6 +1003,38 @@ class _ChatScreenState extends State<ChatScreen> {
           });
           return;
         case ChatIntent.video:
+          if (videoMethod == 'local' || videoMethod == 'live') {
+            final res = await _makeKadrVideo(
+              app,
+              g,
+              text,
+              live: videoMethod == 'live',
+            );
+            if (!mounted) return;
+            setState(() {
+              if (steps.isNotEmpty) steps.last.state = ActivityState.done;
+              steps.add(ActivityStep('Video tayyor', ActivityState.done));
+              chat.projectId = res.projectId;
+              final u = used();
+              chat.messages.add(
+                Msg.ai(
+                  [
+                    'Video tayyor: ${res.scenes.length} ta sahna, '
+                        '${res.durationSec.toStringAsFixed(1)} soniya, musiqa bilan. '
+                        'Hammasi telefonda yaratildi.',
+                    for (final (i, sc) in res.scenes.indexed)
+                      '${i + 1}. ${sc.caption ?? sc.prompt}',
+                    'Yuqorida ko‘ring, galereyaga saqlang yoki muharrirda tahrirlang. '
+                        'Yoqdimi? Bahoyingizdan o‘rganaman.',
+                  ].join('\n'),
+                  tokensIn: u.i,
+                  tokensOut: u.o,
+                  style: _styleFor(app).name,
+                ),
+              );
+            });
+            return;
+          }
           final String pid;
           String? used0;
           if (videoMethod == 'images') {
@@ -899,6 +1220,7 @@ class _ChatScreenState extends State<ChatScreen> {
     settings: _settings,
     planner: gen,
     canWatchVideo: app.canWatchVideo,
+    analystSizeLimited: app.analystHasSizeLimit,
     onStage: _stage,
   );
 
@@ -1011,9 +1333,22 @@ class _ChatScreenState extends State<ChatScreen> {
     _clips.clear();
   });
 
-  void _openConnections() => Navigator.of(
-    context,
-  ).push(CupertinoPageRoute<void>(builder: (_) => const ConnectionsScreen()));
+  void _openConnections() => AppScope.of(context).proMode
+      ? Navigator.of(context).push(
+          CupertinoPageRoute<void>(builder: (_) => const ConnectionsScreen()),
+        )
+      : SettingsScreen.open(context);
+
+  void _openProjects() {
+    final open = widget.onOpenProjects;
+    if (open != null) {
+      open();
+    } else {
+      Navigator.of(
+        context,
+      ).push(CupertinoPageRoute<void>(builder: (_) => const ProjectsScreen()));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1034,9 +1369,13 @@ class _ChatScreenState extends State<ChatScreen> {
         onDeleted: (id) {
           if (_chat?.id == id) _newChat();
         },
-        onConnections: () {
+        onProjects: () {
           Navigator.pop(context);
-          _openConnections();
+          _openProjects();
+        },
+        onSettings: () {
+          Navigator.pop(context);
+          SettingsScreen.open(context);
         },
       ),
       body: SafeArea(
@@ -1045,13 +1384,18 @@ class _ChatScreenState extends State<ChatScreen> {
             _Header(
               title: empty ? null : _chat?.title,
               onNewChat: empty ? null : _newChat,
+              onProfile: () => SettingsScreen.open(context),
             ),
             if (!empty && _chat?.projectId != null)
               _Workspace(projectId: _chat!.projectId!, onUndo: _undoLast),
             Expanded(
               child: empty
                   ? _EmptyHome(
-                      onIdea: (s) => setState(() => _c.text = s),
+                      onMode: _selectMode,
+                      onIdea: (m, s) => setState(() {
+                        _mode = m;
+                        _c.text = s;
+                      }),
                       onOpen: (id) => Navigator.of(context).push(
                         CupertinoPageRoute<void>(
                           builder: (_) => EditorScreen(projectId: id),
@@ -1066,6 +1410,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           _MessageView(
                             msg: m,
                             onConnect: _openConnections,
+                            onRate: m.style == null ? null : (v) => _rate(m, v),
                             onApply: () => _applyProposal(m),
                             onCancel: () => _cancelProposal(m),
                             onUndo:
@@ -1073,22 +1418,22 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ? _undoLast
                                 : null,
                           ),
+                        if (_live != null) _LiveReply(text: _live!),
                       ],
                     ),
             ),
             _Composer(
               controller: _c,
+              focus: _focus,
               clips: _clips,
+              mode: _mode,
+              onClearMode: () => setState(() => _mode = null),
               aspect: _aspect,
               duration: _duration,
-              resolution: _resolution,
-              onAspect: (v) => setState(() => _aspect = v),
-              onDuration: (v) => setState(() => _duration = v),
-              onResolution: (v) => setState(() => _resolution = v),
               busy: _busy,
               refining: _chat?.projectId != null && _clips.isEmpty,
               onAttach: _showAttachMenu,
-              onSettings: _showVideoSettings,
+              onFormat: _showFormatSheet,
               onNote: _editNote,
               onRemove: (c) => setState(() => _clips.remove(c)),
               onSend: _send,
@@ -1102,37 +1447,44 @@ class _ChatScreenState extends State<ChatScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.title, required this.onNewChat});
+  const _Header({
+    required this.title,
+    required this.onNewChat,
+    required this.onProfile,
+  });
   final String? title;
   final VoidCallback? onNewChat;
+  final VoidCallback onProfile;
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+    final app = AppScope.of(context);
     return SizedBox(
-      height: 52,
+      height: 56,
       child: Row(
         children: [
           IconButton(
+            tooltip: 'Suhbatlar',
             icon: Icon(LucideIcons.menu, color: p.textPrimary),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
           Expanded(
             child: Text(
-              title ?? '',
+              title ?? 'Kadr AI',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: p.textPrimary,
-                fontSize: 16,
+                fontSize: 17,
                 fontWeight: FontWeight.w600,
               ),
             ).animate(key: ValueKey(title)).fadeIn(duration: 250.ms),
           ),
-          if (AppScope.of(context).credits != null)
+          if (app.credits != null)
             Tooltip(
-              message: 'HOOKKADR kreditlari',
+              message: 'Kreditlar',
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: Row(
@@ -1141,7 +1493,7 @@ class _Header extends StatelessWidget {
                     Icon(LucideIcons.coins, size: 16, color: p.textSecondary),
                     const SizedBox(width: 4),
                     Text(
-                      '${AppScope.of(context).credits}',
+                      '${app.credits}',
                       style: TextStyle(
                         color: p.textSecondary,
                         fontWeight: FontWeight.w600,
@@ -1151,20 +1503,16 @@ class _Header extends StatelessWidget {
                 ),
               ),
             ),
-          IconButton(
-            tooltip: 'Montaj',
-            icon: Icon(LucideIcons.scissors, color: p.textPrimary),
-            onPressed: () => Navigator.of(context).push(
-              CupertinoPageRoute<void>(builder: (_) => const MontageScreen()),
+          if (onNewChat != null)
+            IconButton(
+              tooltip: 'Yangi suhbat',
+              icon: Icon(LucideIcons.squarePen, color: p.textPrimary),
+              onPressed: onNewChat,
             ),
-          ),
           IconButton(
-            tooltip: 'Yangi suhbat',
-            icon: Icon(
-              LucideIcons.squarePen,
-              color: onNewChat == null ? p.separator : p.textPrimary,
-            ),
-            onPressed: onNewChat,
+            tooltip: 'Profil va sozlamalar',
+            icon: Icon(LucideIcons.circleUserRound, color: p.textPrimary),
+            onPressed: onProfile,
           ),
         ],
       ),
@@ -1179,13 +1527,15 @@ class _ChatDrawer extends StatefulWidget {
     required this.onNewChat,
     required this.onOpenChat,
     required this.onDeleted,
-    required this.onConnections,
+    required this.onProjects,
+    required this.onSettings,
   });
   final String? activeId;
   final VoidCallback onNewChat;
   final ValueChanged<ChatRecord> onOpenChat;
   final ValueChanged<String> onDeleted;
-  final VoidCallback onConnections;
+  final VoidCallback onProjects;
+  final VoidCallback onSettings;
 
   @override
   State<_ChatDrawer> createState() => _ChatDrawerState();
@@ -1310,33 +1660,14 @@ class _ChatDrawerState extends State<_ChatDrawer> {
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(LucideIcons.scissors),
-              title: const Text('Montaj'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  CupertinoPageRoute<void>(
-                    builder: (_) => const MontageScreen(),
-                  ),
-                );
-              },
+              leading: const Icon(LucideIcons.folderOpen),
+              title: const Text('Loyihalarim'),
+              onTap: widget.onProjects,
             ),
             ListTile(
-              leading: const Icon(LucideIcons.layoutGrid),
-              title: const Text('Loyihalar'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  CupertinoPageRoute<void>(
-                    builder: (_) => const ProjectsScreen(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(LucideIcons.link),
-              title: const Text('AI ulanishlari'),
-              onTap: widget.onConnections,
+              leading: const Icon(LucideIcons.circleUserRound),
+              title: const Text('Profil va sozlamalar'),
+              onTap: widget.onSettings,
             ),
           ],
         ),
@@ -1346,123 +1677,123 @@ class _ChatDrawerState extends State<_ChatDrawer> {
 }
 
 class _EmptyHome extends StatelessWidget {
-  const _EmptyHome({required this.onIdea, required this.onOpen});
-  final ValueChanged<String> onIdea;
+  const _EmptyHome({
+    required this.onMode,
+    required this.onIdea,
+    required this.onOpen,
+  });
+  final ValueChanged<KadrMode> onMode;
+  final void Function(KadrMode mode, String text) onIdea;
   final ValueChanged<String> onOpen;
 
   static const _ideas = [
     (
+      KadrMode.video,
       'Restoran reklamasi',
-      '30 soniyali premium restoran reklamasi, issiq ranglar, tezkor kadrlar',
+      'Restoranim uchun 30 soniyali chiroyli reklama video',
     ),
     (
-      'Mahsulot taqdimoti',
-      'Yangi mahsulot taqdimoti uchun 15 soniyali minimalistik video',
+      KadrMode.image,
+      'Mahsulot rasmi',
+      'Oq fonda telefon g‘ilofining chiroyli reklama rasmi',
     ),
-    ('Sayohat intro', 'Sayohat vlogi uchun 10 soniyali dinamik intro'),
+    (
+      KadrMode.question,
+      'Reels g‘oyasi',
+      'Qahvaxonam uchun 5 ta Reels g‘oyasini ber',
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final p = context.palette;
-    final h = DateTime.now().hour;
-    final greet = h < 5
-        ? 'Xayrli tun'
-        : h < 12
-        ? 'Xayrli tong'
-        : h < 18
-        ? 'Xayrli kun'
-        : 'Xayrli kech';
     return LayoutBuilder(
       builder: (context, box) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
         child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: box.maxHeight),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                BrandLogo(key: const ValueKey('brand-logo'), size: 64)
-                    .animate(
-                      onPlay: (c) => AppMotion.reduce(context)
-                          ? null
-                          : c.repeat(reverse: true),
-                    )
-                    .scale(
-                      begin: const Offset(0.94, 0.94),
-                      end: const Offset(1.04, 1.04),
-                      duration: 2200.ms,
-                      curve: Curves.easeInOut,
-                    ),
-                const SizedBox(height: 20),
-                Text(
-                      '$greet,\nbugun nima yaratamiz?',
-                      textAlign: TextAlign.center,
-                      style: AppText.display(context, size: 34),
-                    )
-                    .animate()
-                    .fadeIn(duration: 600.ms)
-                    .slideY(begin: 0.1, curve: Curves.easeOutCubic),
-                const SizedBox(height: 28),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final (i, e) in _ideas.indexed)
-                      GestureDetector(
-                        onTap: () => onIdea(e.$2),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 9,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: p.separator),
-                          ),
-                          child: Text(
-                            e.$1,
-                            style: TextStyle(
-                              color: p.textPrimary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ).animate().fadeIn(
-                        delay: (300 + 80 * i).ms,
-                        duration: 400.ms,
-                      ),
-                  ],
+          constraints: BoxConstraints(minHeight: box.maxHeight - 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: BrandLogo(key: const ValueKey('brand-logo'), size: 48),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Salom! Men Kadr AI',
+                textAlign: TextAlign.center,
+                style: AppText.display(context, size: 30),
+              ).animate().fadeIn(duration: 500.ms),
+              const SizedBox(height: 6),
+              Text(
+                'Nima qilamiz? Tanlang yoki pastga yozing.',
+                textAlign: TextAlign.center,
+                style: AppText.body(context)
+                    .copyWith(color: context.palette.textSecondary),
+              ),
+              const SizedBox(height: 24),
+              GridView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  mainAxisExtent: 138,
                 ),
-                if (app.projects.isNotEmpty) ...[
-                  const SizedBox(height: 32),
-                  Text('Davom eting', style: AppText.caption(context)),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 190,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      shrinkWrap: true,
-                      itemCount: app.projects.length.clamp(0, 8),
-                      separatorBuilder: (_, _) => const SizedBox(width: 12),
-                      itemBuilder: (_, i) {
-                        final pr = app.projects[i];
-                        return SizedBox(
-                          width: 160,
-                          child: ProjectPosterCard(
-                            title: pr.name,
-                            plan: pr.planJson,
-                            onTap: () => onOpen(pr.id),
-                          ),
-                        );
-                      },
-                    ),
-                  ).animate().fadeIn(delay: 600.ms),
+                children: [
+                  for (final (i, m) in KadrMode.values.indexed)
+                    _ModeTile(mode: m, onTap: () => onMode(m))
+                        .animate()
+                        .fadeIn(delay: (80 * i).ms, duration: 300.ms)
+                        .slideY(begin: 0.08, curve: Curves.easeOutCubic),
                 ],
+              ),
+              const SizedBox(height: 22),
+              Text('Masalan', style: AppText.caption(context)),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 44,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _ideas.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) {
+                    final e = _ideas[i];
+                    return _IdeaRow(
+                      icon: e.$1.icon,
+                      text: e.$2,
+                      onTap: () => onIdea(e.$1, e.$3),
+                    );
+                  },
+                ),
+              ),
+              if (app.projects.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                Text('Davom ettirish', style: AppText.caption(context)),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 190,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: app.projects.length.clamp(0, 8),
+                    separatorBuilder: (_, _) => const SizedBox(width: 12),
+                    itemBuilder: (_, i) {
+                      final pr = app.projects[i];
+                      return SizedBox(
+                        width: 150,
+                        child: ProjectPosterCard(
+                          title: pr.name,
+                          plan: pr.planJson,
+                          onTap: () => onOpen(pr.id),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),
@@ -1470,16 +1801,140 @@ class _EmptyHome extends StatelessWidget {
   }
 }
 
+/// One of the four big "what do you want" choices.
+class _ModeTile extends StatelessWidget {
+  const _ModeTile({required this.mode, required this.onTap});
+  final KadrMode mode;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final color = mode.color;
+    return Material(
+      color: p.surface,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: p.separator, width: 0.8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(mode.icon, color: color, size: 22),
+              ),
+              const Spacer(),
+              Text(
+                mode.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: p.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                mode.hint,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.caption(context).copyWith(fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IdeaRow extends StatelessWidget {
+  const _IdeaRow({required this.icon, required this.text, required this.onTap});
+  final IconData icon;
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: p.separator, width: 0.8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: p.textSecondary),
+            const SizedBox(width: 8),
+            Text(text, style: TextStyle(color: p.textPrimary, fontSize: 15)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The answer on-device Kadr AI is writing right now.
+class _LiveReply extends StatelessWidget {
+  const _LiveReply({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 10),
+    child: Text.rich(
+      TextSpan(
+        children: [
+          lightMarkdown(
+            text,
+            GoogleFonts.inter(
+              color: context.palette.textPrimary,
+              fontSize: 16,
+              height: 1.55,
+            ),
+          ),
+          TextSpan(
+            text: ' ▍',
+            style: TextStyle(color: context.palette.accent),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _MessageView extends StatelessWidget {
   const _MessageView({
     required this.msg,
     required this.onConnect,
+    this.onRate,
     this.onUndo,
     this.onApply,
     this.onCancel,
   });
   final Msg msg;
   final VoidCallback onConnect;
+
+  /// 👍 (1) / 👎 (-1) on a picture or video Kadr AI drew.
+  final ValueChanged<int>? onRate;
   final VoidCallback? onUndo;
   final VoidCallback? onApply;
   final VoidCallback? onCancel;
@@ -1634,20 +2089,25 @@ class _MessageView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                msg.text,
-                style: msg.isError
-                    ? TextStyle(
+              msg.isError
+                  ? Text(
+                      msg.text,
+                      style: const TextStyle(
                         color: AppColors.danger,
                         fontSize: 15.5,
                         height: 1.45,
-                      )
-                    : GoogleFonts.inter(
-                        color: p.textPrimary,
-                        fontSize: 16,
-                        height: 1.55,
                       ),
-              ),
+                    )
+                  : Text.rich(
+                      lightMarkdown(
+                        msg.text,
+                        GoogleFonts.inter(
+                          color: p.textPrimary,
+                          fontSize: 16,
+                          height: 1.55,
+                        ),
+                      ),
+                    ),
               if (msg.imagePath != null &&
                   File(msg.imagePath!).existsSync()) ...[
                 const SizedBox(height: 10),
@@ -1665,7 +2125,7 @@ class _MessageView extends StatelessWidget {
                   ),
                 ),
               ],
-              if (msg.genPrompt != null)
+              if (msg.genPrompt != null && AppScope.of(context).proMode)
                 Theme(
                   data: Theme.of(context)
                       .copyWith(dividerColor: Colors.transparent),
@@ -1688,7 +2148,8 @@ class _MessageView extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 6),
                 child: Row(
                   children: [
-                    if (msg.tokensIn + msg.tokensOut > 0)
+                    if (msg.tokensIn + msg.tokensOut > 0 &&
+                        AppScope.of(context).proMode)
                       Padding(
                         padding: const EdgeInsets.only(right: 12),
                         child: Text(
@@ -1698,6 +2159,20 @@ class _MessageView extends StatelessWidget {
                         ),
                       ),
                     _copyButton(context, msg.text),
+                    if (onRate != null) ...[
+                      _RateButton(
+                        icon: LucideIcons.thumbsUp,
+                        label: 'Yoqdi',
+                        selected: msg.rating == 1,
+                        onTap: () => onRate!(1),
+                      ),
+                      _RateButton(
+                        icon: LucideIcons.thumbsDown,
+                        label: 'Yoqmadi',
+                        selected: msg.rating == -1,
+                        onTap: () => onRate!(-1),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1720,7 +2195,7 @@ class _MessageView extends StatelessWidget {
                     minimumSize: const Size(180, 44),
                   ),
                   onPressed: onConnect,
-                  child: const Text('AI ulanishlari'),
+                  child: const Text('Kadr AI’ni yoqish'),
                 ),
               ],
               if (project != null) ...[
@@ -1799,66 +2274,89 @@ class _MessageView extends StatelessWidget {
 class _Composer extends StatelessWidget {
   const _Composer({
     required this.controller,
+    required this.focus,
     required this.clips,
+    required this.mode,
+    required this.onClearMode,
     required this.aspect,
     required this.duration,
-    required this.resolution,
-    required this.onAspect,
-    required this.onDuration,
-    required this.onResolution,
     required this.busy,
     required this.refining,
     required this.onAttach,
-    required this.onSettings,
+    required this.onFormat,
     required this.onNote,
     required this.onRemove,
     required this.onSend,
     required this.onManage,
   });
   final TextEditingController controller;
+  final FocusNode focus;
   final List<_Clip> clips;
+  final KadrMode? mode;
+  final VoidCallback onClearMode;
   final String aspect;
   final int duration;
-  final String resolution;
-  final ValueChanged<String> onAspect;
-  final ValueChanged<int> onDuration;
-  final ValueChanged<String> onResolution;
   final bool busy;
   final bool refining;
   final VoidCallback onAttach;
-  final VoidCallback onSettings;
+  final VoidCallback onFormat;
   final ValueChanged<_Clip> onNote;
   final ValueChanged<_Clip> onRemove;
   final VoidCallback onSend;
   final VoidCallback onManage;
 
+  String get _hint => switch (mode) {
+    KadrMode.video => 'Qanday video kerak? Masalan: kafe uchun reklama',
+    KadrMode.image => 'Qanday rasm kerak? Masalan: oq fonda soat',
+    KadrMode.montage =>
+      clips.isEmpty
+          ? 'Videolarni tanlang (+)'
+          : 'Qanday montaj? Yozmasangiz ham bo‘ladi',
+    KadrMode.question => 'Savolingizni yozing',
+    null =>
+      refining
+          ? 'O‘zgartirishni yozing: masalan, boshini qisqartir'
+          : 'Kadr AI’ga yozing…',
+  };
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
     final app = AppScope.of(context);
-    final model = app.preferred?.label ?? 'Auto';
+    final showFormat =
+        !refining &&
+        (clips.isNotEmpty ||
+            mode == KadrMode.video ||
+            mode == KadrMode.montage ||
+            mode == KadrMode.image);
+    final format = OutputFormat.of(aspect);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
       child: AnimatedSize(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(14, 12, 10, 8),
+          padding: const EdgeInsets.fromLTRB(14, 10, 10, 8),
           decoration: BoxDecoration(
             color: p.surface,
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(26),
             border: Border.all(color: p.separator, width: 0.8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 18,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (mode != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: InputChip(
+                    avatar: Icon(mode!.icon, size: 16, color: mode!.color),
+                    label: Text(mode!.title),
+                    onDeleted: busy ? null : onClearMode,
+                    deleteIcon: const Icon(LucideIcons.x, size: 14),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
               if (clips.isNotEmpty) ...[
                 SizedBox(
                   height: 92,
@@ -1868,6 +2366,7 @@ class _Composer extends StatelessWidget {
                     separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (_, i) =>
                         _ClipCard(
+                              sizeLimited: app.analystHasSizeLimit,
                               clip: clips[i],
                               busy: busy,
                               onNote: onNote,
@@ -1882,178 +2381,75 @@ class _Composer extends StatelessWidget {
               ],
               TextField(
                 controller: controller,
+                focusNode: focus,
                 enabled: !busy,
                 minLines: 1,
                 maxLines: 6,
+                textCapitalization: TextCapitalization.sentences,
                 style: const TextStyle(fontSize: 17),
                 decoration: InputDecoration(
                   filled: false,
                   isCollapsed: true,
                   contentPadding: const EdgeInsets.fromLTRB(2, 6, 2, 10),
                   border: InputBorder.none,
-                  hintText: refining
-                      ? 'O‘zgartirish yozing: 3-kadrni qisqartir…'
-                      : 'HOOKKADR’dan so‘rang…',
+                  hintText: _hint,
                 ),
               ),
               Row(
                 children: [
-                  GestureDetector(
+                  _RoundButton(
+                    icon: LucideIcons.plus,
+                    tooltip: 'Video yoki rasm qo‘shish',
                     onTap: busy ? null : onAttach,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: p.separator),
-                      ),
-                      child: Icon(
-                        LucideIcons.plus,
-                        size: 18,
-                        color: p.textPrimary,
-                      ),
-                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: refining
-                        ? Text(
-                            'Loyiha tahrirlanmoqda',
-                            style: AppText.caption(context)
-                                .copyWith(fontSize: 12),
-                          )
-                        : SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 6),
-                                  child: Text(
-                                    'Keyingi:',
-                                    style: AppText.caption(context)
-                                        .copyWith(fontSize: 11.5),
-                                  ),
-                                ),
-                                OptionPill(
-                                  icon: LucideIcons.ratio,
-                                  label: aspect,
-                                  busy: busy,
-                                  options: const ['9:16', '16:9', '1:1', '4:5'],
-                                  onPick: onAspect,
-                                ),
-                                OptionPill(
-                                  icon: LucideIcons.timer,
-                                  label: '$duration s',
-                                  busy: busy,
-                                  options: const [
-                                    '15 s',
-                                    '30 s',
-                                    '45 s',
-                                    '60 s',
-                                  ],
-                                  onPick: (v) =>
-                                      onDuration(int.parse(v.split(' ').first)),
-                                ),
-                                OptionPill(
-                                  icon: LucideIcons.film,
-                                  label: resolution,
-                                  busy: busy,
-                                  options: const [
-                                    '360p',
-                                    '720p',
-                                    '1080p',
-                                    '4K',
-                                  ],
-                                  onPick: onResolution,
-                                ),
-                                Text(
-                                  FileSizeEstimator.estimateLabel(
-                                    resolution,
-                                    duration.toDouble(),
-                                  ),
-                                  style: AppText.caption(context)
-                                      .copyWith(fontSize: 11.5),
-                                ),
-                              ],
-                            ),
-                          ),
-                  ),
-                  PopupMenuButton<String>(
-                    enabled: !busy,
-                    color: p.surface,
-                    onSelected: (v) {
-                      if (v == 'manage') {
-                        onManage();
-                      } else if (v == 'auto') {
-                        app.setPreferred(null);
-                      } else {
-                        app.setPreferred(ProviderKind.values.byName(v));
-                      }
-                    },
-                    itemBuilder: (_) => [
-                      const PopupMenuItem(
-                        value: 'auto',
-                        child: Text('Auto — tavsiya etiladi'),
-                      ),
-                      for (final k in ProviderKind.values)
-                        PopupMenuItem(
-                          value: k.name,
-                          enabled: app.isConnected(k),
-                          child: Text(
-                            app.isConnected(k)
-                                ? k.label
-                                : '${k.label} · ulanmagan',
-                          ),
-                        ),
-                      const PopupMenuDivider(),
-                      const PopupMenuItem(
-                        value: 'manage',
-                        child: Text('AI ulanishlarini boshqarish'),
-                      ),
-                    ],
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          StatusDot(on: app.aiReady),
-                          const SizedBox(width: 6),
-                          Text(
-                            model,
-                            style: TextStyle(
-                              color: p.textSecondary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Icon(
-                            LucideIcons.chevronDown,
-                            size: 11,
-                            color: p.textSecondary,
-                          ),
-                        ],
-                      ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: showFormat
+                          ? ActionChip(
+                              avatar: Icon(
+                                aspect == '16:9'
+                                    ? LucideIcons.monitor
+                                    : LucideIcons.smartphone,
+                                size: 16,
+                              ),
+                              label: Text(
+                                mode == KadrMode.image
+                                    ? format.label
+                                    : '${format.label} · $duration s',
+                              ),
+                              onPressed: busy ? null : onFormat,
+                              visualDensity: VisualDensity.compact,
+                            )
+                          : const SizedBox.shrink(),
                     ),
                   ),
-                  const SizedBox(width: 2),
+                  if (app.proMode) _ModelPicker(busy: busy, onManage: onManage),
+                  const SizedBox(width: 4),
                   GestureDetector(
                     onTap: busy ? null : onSend,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
-                      width: 38,
-                      height: 38,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: busy ? p.surfaceRaised : p.accent,
                       ),
-                      child: Icon(
-                        LucideIcons.arrowUp,
-                        color: p.onAccent,
-                        size: 20,
-                      ),
+                      child: busy
+                          ? Padding(
+                              padding: const EdgeInsets.all(11),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: p.textSecondary,
+                              ),
+                            )
+                          : Icon(
+                              LucideIcons.arrowUp,
+                              color: p.onAccent,
+                              size: 20,
+                            ),
                     ),
                   ),
                 ],
@@ -2066,14 +2462,104 @@ class _Composer extends StatelessWidget {
   }
 }
 
+class _RoundButton extends StatelessWidget {
+  const _RoundButton({required this.icon, required this.tooltip, this.onTap});
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: p.separator),
+          ),
+          child: Icon(icon, size: 20, color: p.textPrimary),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pro only: choose which AI answers (Auto by default).
+class _ModelPicker extends StatelessWidget {
+  const _ModelPicker({required this.busy, required this.onManage});
+  final bool busy;
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final app = AppScope.of(context);
+    return PopupMenuButton<String>(
+      enabled: !busy,
+      color: p.surface,
+      onSelected: (v) {
+        if (v == 'manage') {
+          onManage();
+        } else if (v == 'auto') {
+          app.setPreferred(null);
+        } else {
+          app.setPreferred(ProviderKind.values.byName(v));
+        }
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: 'auto',
+          child: Text('Auto — tavsiya etiladi'),
+        ),
+        for (final k in ProviderKind.values)
+          PopupMenuItem(
+            value: k.name,
+            enabled: app.isConnected(k),
+            child: Text(
+              app.isConnected(k) ? k.label : '${k.label} · ulanmagan',
+            ),
+          ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(value: 'manage', child: Text('AI ulanishlari')),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            StatusDot(on: app.aiReady),
+            const SizedBox(width: 6),
+            Text(
+              app.preferred?.label ?? 'Auto',
+              style: TextStyle(
+                color: p.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Icon(LucideIcons.chevronDown, size: 11, color: p.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ClipCard extends StatelessWidget {
   const _ClipCard({
+    this.sizeLimited = true,
     required this.clip,
     required this.busy,
     required this.onNote,
     required this.onRemove,
   });
   final _Clip clip;
+  final bool sizeLimited;
   final bool busy;
   final ValueChanged<_Clip> onNote;
   final ValueChanged<_Clip> onRemove;
@@ -2093,7 +2579,9 @@ class _ClipCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: p.background,
           borderRadius: BorderRadius.circular(14),
-          border: clip.tooLarge ? Border.all(color: AppColors.danger) : null,
+          border: (clip.tooLarge && sizeLimited)
+              ? Border.all(color: AppColors.danger)
+              : null,
         ),
         child: Row(
           children: [
@@ -2143,12 +2631,14 @@ class _ClipCard extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    clip.tooLarge
+                    (clip.tooLarge && sizeLimited)
                         ? '18 MB dan katta'
                         : (meta.isEmpty ? 'O‘lchanmoqda…' : meta),
                     style: TextStyle(
                       fontSize: 11,
-                      color: clip.tooLarge ? AppColors.danger : p.textSecondary,
+                      color: (clip.tooLarge && sizeLimited)
+                          ? AppColors.danger
+                          : p.textSecondary,
                     ),
                   ),
                   const Spacer(),
@@ -2528,6 +3018,30 @@ class _Workspace extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RateButton extends StatelessWidget {
+  const _RateButton({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return IconButton(
+      tooltip: label,
+      visualDensity: VisualDensity.compact,
+      onPressed: onTap,
+      icon: Icon(icon, size: 17, color: selected ? p.accent : p.textSecondary),
     );
   }
 }
