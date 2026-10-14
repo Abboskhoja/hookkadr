@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../theme/app_theme.dart';
@@ -24,6 +25,50 @@ class AppCard extends StatelessWidget {
   );
 }
 
+/// A round liquid-glass control that floats over the page: it bends what
+/// is behind it (Impeller) or frosts it (Skia), swells under the finger.
+class GlassIconButton extends StatelessWidget {
+  const GlassIconButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.size = 44,
+  });
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: Semantics(
+      button: true,
+      label: tooltip,
+      child: SizedBox.square(
+        dimension: size,
+        child: LiquidGlassLens(
+          touch: const LiquidGlassTouch(flex: LiquidGlassFlex.subtle()),
+          style: LiquidGlassStyle(
+            shape: LiquidGlassShape.roundedRectangle(cornerRadius: size / 2),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: Center(
+                child: Icon(icon, size: 20, color: context.palette.textPrimary),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 /// The page heading. Screens have no app bar: the title sits in the page
 /// itself, pushed screens get a round back button, and nothing is painted
 /// across the top of the screen.
@@ -34,30 +79,16 @@ class PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.palette;
     final canPop = Navigator.of(context).canPop();
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
       child: Row(
         children: [
           if (canPop) ...[
-            Material(
-              color: p.surface,
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () => Navigator.of(context).maybePop(),
-                child: SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: Icon(
-                    LucideIcons.chevronLeft,
-                    size: 22,
-                    color: p.textPrimary,
-                    semanticLabel: 'Orqaga',
-                  ),
-                ),
-              ),
+            GlassIconButton(
+              icon: LucideIcons.chevronLeft,
+              tooltip: 'Orqaga',
+              onTap: () => Navigator.of(context).maybePop(),
             ),
             const SizedBox(width: 12),
           ],

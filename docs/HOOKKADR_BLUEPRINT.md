@@ -920,3 +920,12 @@ tablet ikki ustunli layout, Riverpod/go_router migratsiyasi, backend.
 - Hech bir ekranda app bar yo'q: sarlavha sahifaning o'zida (`PageHeader`, `lib/core/widgets/common.dart`), ichki ekranlarda yumaloq "orqaga" tugmasi. Suhbat ekranida yuqori panel o'rniga faqat yumaloq tugmalar (menyu, yangi suhbat, profil) — panel foni va "Kadr AI" sarlavhasi yo'q.
 - Real-ESRGAN (x4plus_anime_6B, 17 MB) bilan rasmni kattalashtirish sinaldi: 448×768 → 896×1536 M2 kompyuterda 65–85 s (46 s kichik rasmda). Telefonda undan ham sekin, shuning uchun qo'shilmadi.
 
+### 2026-10-15 — Liquid Glass: pastki panel va tugmalar
+
+- `liquid_glass_easy` 4.3.4 (MIT, pub.dev 160/160; 5.0.0 juda yangi bo'lgani uchun olinmadi) qo'shildi.
+- Pastki panel fonsiz: `LiquidGlassTabBar.withImpeller` — sahifa ustida suzib turadigan shisha kapsula, faqat ikonka va yorliqlar. Impeller'da orqadagi kontentni sindiradi, Skia'da xiralashgan shishaga tushadi. Klaviatura ochilganda yashirinadi. Yorliqlar bir qatorda (sig'masa kichrayadi).
+- Ro'yxatlar (Profil, Shablonlar, Loyihalar, Bosh sahifa) panel ostidan o'tadi; pastki padding oxirgi qatorni panel ustiga chiqaradi (`HomeShell` `MediaQuery.padding.bottom`ga panel joyini qo'shadi).
+- `GlassIconButton` (`lib/core/widgets/common.dart`): suhbatdagi menyu/yangi suhbat/profil va `PageHeader` "orqaga" tugmasi shisha, bosilganda egiladi.
+- `main()` shaderlarni oldindan yuklaydi (`LiquidGlassShaders.ensureLoaded`).
+- Simulyatorda (iOS 27, Impeller) skrinshotlar bilan tekshirildi; haqiqiy telefonda va Android'da sinalmagan.
+

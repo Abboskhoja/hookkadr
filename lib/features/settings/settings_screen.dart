@@ -30,7 +30,10 @@ class SettingsScreen extends StatelessWidget {
     final app = AppScope.of(context);
     final p = context.palette;
     return Scaffold(
+      // Lists run under the floating glass tab bar; their own bottom
+      // padding keeps the last row reachable above it.
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             const PageHeader('Profil va sozlamalar'),
@@ -43,7 +46,12 @@ class SettingsScreen extends StatelessWidget {
 
   Widget _content(BuildContext context, AppController app, AppPalette p) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        8,
+        20,
+        32 + MediaQuery.paddingOf(context).bottom,
+      ),
       children: [
         AppCard(
           padding: const EdgeInsets.all(18),

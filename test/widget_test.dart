@@ -62,8 +62,9 @@ void main() {
     await _settle(tester);
 
     expect(find.text('Nima yaratamiz?'), findsOneWidget);
-    // Kadr AI prepares itself: an honest status, no install step.
-    expect(find.text('Kadr AI tayyorlanmoqda'), findsOneWidget);
+    // Kadr AI prepares itself: an honest status, no install step (the
+    // banner, and the image card says the same).
+    expect(find.text('Kadr AI tayyorlanmoqda'), findsWidgets);
     for (final t in [
       'Rasmlardan reklama',
       'AI video',
@@ -224,10 +225,7 @@ void main() {
     await tester.enterText(find.byType(EditableText), 'Reels uchun g‘oya ber');
     await tester.tap(find.byIcon(LucideIcons.arrowUp));
     await _settle(tester);
-    expect(
-      find.textContaining('Bu ish uchun Kadr AI kerak'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Bu ish uchun Kadr AI kerak'), findsOneWidget);
     await tester.tap(find.text('Kadr AI’ni yoqish'));
     await _settle(tester);
     expect(find.text('Profil va sozlamalar'), findsOneWidget);

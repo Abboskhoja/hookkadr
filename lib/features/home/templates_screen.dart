@@ -78,13 +78,21 @@ class TemplatesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     return Scaffold(
+      // Lists run under the floating glass tab bar; their own bottom
+      // padding keeps the last row reachable above it.
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             const PageHeader('Shablonlar'),
             Expanded(
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  8,
+                  16,
+                  24 + MediaQuery.paddingOf(context).bottom,
+                ),
                 itemCount: VideoTemplate.all.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, i) {

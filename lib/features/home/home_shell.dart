@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -38,53 +39,100 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
+  static const _items = [
+    LiquidGlassTabBarItem(
+      icon: LucideIcons.house,
+      label: 'Bosh sahifa',
+      labelBuilder: _label,
+    ),
+    LiquidGlassTabBarItem(
+      icon: LucideIcons.sparkles,
+      label: 'AI Studiya',
+      labelBuilder: _label,
+    ),
+    LiquidGlassTabBarItem(
+      icon: LucideIcons.folderOpen,
+      label: 'Loyihalar',
+      labelBuilder: _label,
+    ),
+    LiquidGlassTabBarItem(
+      icon: LucideIcons.layoutTemplate,
+      label: 'Shablonlar',
+      labelBuilder: _label,
+    ),
+    LiquidGlassTabBarItem(
+      icon: LucideIcons.circleUserRound,
+      label: 'Profil',
+      labelBuilder: _label,
+    ),
+  ];
+
+  /// One line, shrunk rather than wrapped, so a narrow phone or a large
+  /// system font never pushes the label out of the bar.
+  static Widget _label(BuildContext context, LiquidGlassLabel l) => FittedBox(
+    fit: BoxFit.scaleDown,
+    child: Text(l.text ?? '', style: l.textStyle, maxLines: 1, softWrap: false),
+  );
+
+  /// The glass bar floats over the page: no background of its own, the
+  /// screens show through it. They get this much extra bottom inset so
+  /// their last row and the chat composer stay above the bar.
+  static const _barHeight = 68.0, _barGap = 12.0;
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+    final mq = MediaQuery.of(context);
+    final keyboard = mq.viewInsets.bottom > 0;
+    final reserve = keyboard ? 0.0 : _barHeight + _barGap + 8;
     return Scaffold(
-      body: IndexedStack(
-        index: _tab,
+      body: Stack(
         children: [
-          HomeScreen(
-            onAsk: _ask,
-            onOpenProfile: () => setState(() => _tab = _profile),
-            onOpenProjects: () => setState(() => _tab = _projects),
+          MediaQuery(
+            data: mq.copyWith(
+              padding: mq.padding.copyWith(bottom: mq.padding.bottom + reserve),
+              viewPadding: mq.viewPadding.copyWith(
+                bottom: mq.viewPadding.bottom + reserve,
+              ),
+            ),
+            child: IndexedStack(
+              index: _tab,
+              children: [
+                HomeScreen(
+                  onAsk: _ask,
+                  onOpenProfile: () => setState(() => _tab = _profile),
+                  onOpenProjects: () => setState(() => _tab = _projects),
+                ),
+                ChatScreen(
+                  onOpenProjects: () => setState(() => _tab = _projects),
+                  requests: _requests,
+                ),
+                const ProjectsScreen(),
+                TemplatesScreen(onAsk: _ask),
+                const SettingsScreen(asTab: true),
+              ],
+            ),
           ),
-          ChatScreen(
-            onOpenProjects: () => setState(() => _tab = _projects),
-            requests: _requests,
-          ),
-          const ProjectsScreen(),
-          TemplatesScreen(onAsk: _ask),
-          const SettingsScreen(asTab: true),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: p.surface,
-        indicatorColor: p.selected,
-        selectedIndex: _tab,
-        height: 68,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(LucideIcons.house),
-            label: 'Bosh sahifa',
-          ),
-          NavigationDestination(
-            icon: Icon(LucideIcons.sparkles),
-            label: 'AI Studiya',
-          ),
-          NavigationDestination(
-            icon: Icon(LucideIcons.folderOpen),
-            label: 'Loyihalar',
-          ),
-          NavigationDestination(
-            icon: Icon(LucideIcons.layoutTemplate),
-            label: 'Shablonlar',
-          ),
-          NavigationDestination(
-            icon: Icon(LucideIcons.circleUserRound),
-            label: 'Profil',
+          LiquidGlassTabBar.withImpeller(
+            items: _items,
+            selectedIndex: _tab,
+            onChanged: (i) => setState(() => _tab = i),
+            // Hidden while typing so the chat composer has the room.
+            visibility: !keyboard,
+            width: (mq.size.width - 24).clamp(0, 520),
+            height: _barHeight,
+            margin: const EdgeInsets.only(bottom: _barGap),
+            itemPadding: 4,
+            itemStyle: LiquidGlassTabItemStyle(
+              selectedColor: p.accent,
+              unselectedColor: p.textSecondary,
+              iconSize: 22,
+              labelFontSize: 10.5,
+            ),
+            // Translucent: the selected icon is drawn under the pill.
+            pillStyle: LiquidGlassTabPillStyle(
+              color: p.accent.withValues(alpha: 0.14),
+            ),
           ),
         ],
       ),

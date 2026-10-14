@@ -171,7 +171,14 @@ class HomeScreen extends StatelessWidget {
             ],
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 22, 16, 28),
+                // Scrolls under the glass tab bar, but the last line can
+                // always be brought above it.
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  22,
+                  16,
+                  28 + MediaQuery.paddingOf(context).bottom,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

@@ -16,7 +16,10 @@ class ProjectsScreen extends StatelessWidget {
     final app = AppScope.of(context);
     final items = app.projects;
     return Scaffold(
+      // Lists run under the floating glass tab bar; their own bottom
+      // padding keeps the last row reachable above it.
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             const PageHeader('Loyihalar'),
@@ -36,7 +39,12 @@ class ProjectsScreen extends StatelessWidget {
             message: 'Suhbatda birinchi videongiz rejasini yarating.',
           )
         : GridView.builder(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              8,
+              20,
+              32 + MediaQuery.paddingOf(context).bottom,
+            ),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               mainAxisSpacing: 14,

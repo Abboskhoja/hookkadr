@@ -19,6 +19,7 @@ import '../../core/format.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/semantic_colors.dart';
 import '../../core/widgets/brand_logo.dart';
+import '../../core/widgets/common.dart';
 import '../../core/widgets/light_markdown.dart';
 import '../../core/widgets/render_player.dart';
 import '../../core/widgets/poster.dart';
@@ -1458,22 +1459,7 @@ class _Header extends StatelessWidget {
     final app = AppScope.of(context);
     Widget round(String tip, IconData icon, VoidCallback? onTap) => Padding(
       padding: const EdgeInsets.only(left: 8),
-      child: Tooltip(
-        message: tip,
-        child: Material(
-          color: p.surface,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: SizedBox(
-              width: 40,
-              height: 40,
-              child: Icon(icon, size: 20, color: p.textPrimary),
-            ),
-          ),
-        ),
-      ),
+      child: GlassIconButton(icon: icon, tooltip: tip, onTap: onTap),
     );
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
