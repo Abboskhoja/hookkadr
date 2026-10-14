@@ -78,7 +78,11 @@ final class _Native {
     if (Platform.isIOS || Platform.isMacOS) {
       return DynamicLibrary.open('KadrLlm.framework/KadrLlm');
     }
-    if (Platform.isAndroid) return DynamicLibrary.open('libkadr_llm.so');
+    if (Platform.isAndroid) {
+      return DynamicLibrary.open(
+        armDotProd() ? 'libkadr_llm.so' : 'libkadr_llm_compat.so',
+      );
+    }
     throw const KadrLlmException(
       'Kadr AI runtime faqat iOS va Androidda ishlaydi.',
     );
@@ -295,4 +299,21 @@ class KadrLlm {
     _closed = true;
     _send.send(_Close());
   }
+}
+
+/// Do all CPU cores have the ARMv8.2 dot-product and fp16 instructions the
+/// fast Android build is compiled for? Older cores get the plain armv8-a
+/// build instead of crashing on an illegal instruction.
+bool armDotProd([String? cpuinfo]) {
+  try {
+    cpuinfo ??= File('/proc/cpuinfo').readAsStringSync();
+  } catch (_) {
+    return false;
+  }
+  final features = RegExp(r'^Features\s*:(.*)$', multiLine: true)
+      .allMatches(cpuinfo)
+      .map((m) => m.group(1)!.split(RegExp(r'\s+')).toSet())
+      .toList();
+  return features.isNotEmpty &&
+      features.every((f) => f.contains('asimddp') && f.contains('asimdhp'));
 }

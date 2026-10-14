@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../theme/app_theme.dart';
 
@@ -21,6 +22,58 @@ class AppCard extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// The page heading. Screens have no app bar: the title sits in the page
+/// itself, pushed screens get a round back button, and nothing is painted
+/// across the top of the screen.
+class PageHeader extends StatelessWidget {
+  const PageHeader(this.title, {super.key, this.actions = const []});
+  final String title;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final canPop = Navigator.of(context).canPop();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+      child: Row(
+        children: [
+          if (canPop) ...[
+            Material(
+              color: p.surface,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => Navigator.of(context).maybePop(),
+                child: SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Icon(
+                    LucideIcons.chevronLeft,
+                    size: 22,
+                    color: p.textPrimary,
+                    semanticLabel: 'Orqaga',
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.display(context, size: 28),
+            ),
+          ),
+          ...actions,
+        ],
+      ),
+    );
+  }
 }
 
 class SectionTitle extends StatelessWidget {

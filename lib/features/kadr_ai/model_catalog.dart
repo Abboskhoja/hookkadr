@@ -1,3 +1,11 @@
+/// Phones report less memory than they are sold with: the kernel and the GPU
+/// carve-out are left out (a "6 GB" iPhone 13 Pro reports ~5.7 GiB, an
+/// "8 GB" iPhone 15 Pro ~7.45 GiB, "8 GB" Android phones 7.2–7.6 GiB).
+/// True when [reportedBytes] comes from a phone of at least [classBytes];
+/// unknown memory (0) is never held against the phone.
+bool ramClassAtLeast(int reportedBytes, int classBytes) =>
+    reportedBytes <= 0 || reportedBytes >= classBytes * 0.8;
+
 /// What a pack does inside Kadr AI.
 enum KadrPackRole { brain, painter, motion, decoder }
 
@@ -42,6 +50,9 @@ class KadrModelPack {
   final String licenseUrl;
   final int minRamBytes;
   final int contextSize;
+
+  /// Can a phone reporting [ramBytes] of memory run this pack?
+  bool fitsRam(int ramBytes) => ramClassAtLeast(ramBytes, minRamBytes);
 
   String get sizeLabel => '${(sizeBytes / 1e9).toStringAsFixed(1)} GB';
 

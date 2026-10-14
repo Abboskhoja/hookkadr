@@ -1,0 +1,33 @@
+// Kadr AI language model runtime (libkadr_llm.so).
+// The .so files in src/main/jniLibs are prebuilt by tool/build_android.sh;
+// nothing is compiled here, so app builds stay fast and need no NDK.
+group = 'uz.hookkadr.kadr_llm'
+version = '0.1.0'
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.12.1'
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace = 'uz.hookkadr.kadr_llm'
+    compileSdk = flutter.compileSdkVersion
+
+    defaultConfig {
+        minSdk = 30
+    }
+}

@@ -1382,7 +1382,6 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           children: [
             _Header(
-              title: empty ? null : _chat?.title,
               onNewChat: empty ? null : _newChat,
               onProfile: () => SettingsScreen.open(context),
             ),
@@ -1446,13 +1445,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
+/// No bar: only the round controls float over the page. The page title is
+/// not repeated here — the drawer lists the conversations.
 class _Header extends StatelessWidget {
-  const _Header({
-    required this.title,
-    required this.onNewChat,
-    required this.onProfile,
-  });
-  final String? title;
+  const _Header({required this.onNewChat, required this.onProfile});
   final VoidCallback? onNewChat;
   final VoidCallback onProfile;
 
@@ -1460,60 +1456,56 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final app = AppScope.of(context);
-    return SizedBox(
-      height: 56,
+    Widget round(String tip, IconData icon, VoidCallback? onTap) => Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: Tooltip(
+        message: tip,
+        child: Material(
+          color: p.surface,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Icon(icon, size: 20, color: p.textPrimary),
+            ),
+          ),
+        ),
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Row(
         children: [
-          IconButton(
-            tooltip: 'Suhbatlar',
-            icon: Icon(LucideIcons.menu, color: p.textPrimary),
-            onPressed: () => Scaffold.of(context).openDrawer(),
+          round(
+            'Suhbatlar',
+            LucideIcons.menu,
+            () => Scaffold.of(context).openDrawer(),
           ),
-          Expanded(
-            child: Text(
-              title ?? 'Kadr AI',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: p.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-              ),
-            ).animate(key: ValueKey(title)).fadeIn(duration: 250.ms),
-          ),
+          const Spacer(),
           if (app.credits != null)
             Tooltip(
               message: 'Kreditlar',
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(LucideIcons.coins, size: 16, color: p.textSecondary),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${app.credits}',
-                      style: TextStyle(
-                        color: p.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(LucideIcons.coins, size: 16, color: p.textSecondary),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${app.credits}',
+                    style: TextStyle(
+                      color: p.textSecondary,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           if (onNewChat != null)
-            IconButton(
-              tooltip: 'Yangi suhbat',
-              icon: Icon(LucideIcons.squarePen, color: p.textPrimary),
-              onPressed: onNewChat,
-            ),
-          IconButton(
-            tooltip: 'Profil va sozlamalar',
-            icon: Icon(LucideIcons.circleUserRound, color: p.textPrimary),
-            onPressed: onProfile,
-          ),
+            round('Yangi suhbat', LucideIcons.squarePen, onNewChat),
+          round('Profil va sozlamalar', LucideIcons.circleUserRound, onProfile),
         ],
       ),
     );

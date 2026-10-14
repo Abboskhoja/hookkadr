@@ -94,6 +94,25 @@ void main() {
       ]);
     });
 
+    test('memory is judged by the class the phone is sold as', () async {
+      // Real reported sizes: iPhone 15 Pro (8 GB), iPhone 13 Pro (6 GB),
+      // a typical 8 GB and 4 GB Android phone.
+      expect(
+        (await _app(ram: 7994212352, wifi: true)).wantedPacks,
+        contains(KadrModelPack.motion),
+      );
+      expect((await _app(ram: 6083182592, wifi: true)).wantedPacks, [
+        KadrModelPack.brain,
+        KadrModelPack.painter,
+      ]);
+      expect(
+        (await _app(ram: 7700000000, wifi: true)).wantedPacks,
+        contains(KadrModelPack.motion),
+      );
+      expect((await _app(ram: 3850000000, wifi: true)).wantedPacks, isEmpty);
+      expect(ramClassAtLeast(0, 8 << 30), isTrue, reason: 'unknown memory');
+    });
+
     test('big downloads wait for Wi-Fi and say so', () async {
       final app = await _app(ram: 8 * _gb, wifi: false);
       await app.autoSetupKadrAi();

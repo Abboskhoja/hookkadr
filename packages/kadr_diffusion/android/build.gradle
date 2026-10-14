@@ -1,0 +1,33 @@
+// Kadr AI painter runtime (libkadr_sd.so).
+// The .so files in src/main/jniLibs are prebuilt by tool/build_android.sh;
+// nothing is compiled here, so app builds stay fast and need no NDK.
+group = 'uz.hookkadr.kadr_diffusion'
+version = '0.1.0'
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.12.1'
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace = 'uz.hookkadr.kadr_diffusion'
+    compileSdk = flutter.compileSdkVersion
+
+    defaultConfig {
+        minSdk = 30
+    }
+}

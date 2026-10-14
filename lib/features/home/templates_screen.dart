@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/common.dart';
 import '../chat/chat_screen.dart';
 import '../product_ad/presentation/product_ad_flow.dart';
 
@@ -77,44 +78,52 @@ class TemplatesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     return Scaffold(
-      appBar: AppBar(title: const Text('Shablonlar')),
-      body: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        itemCount: VideoTemplate.all.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (context, i) {
-          final t = VideoTemplate.all[i];
-          return Material(
-            color: p.surface,
-            borderRadius: BorderRadius.circular(18),
-            child: ListTile(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 6,
-              ),
-              leading: Icon(t.icon, color: p.accent),
-              title: Text(t.title),
-              subtitle: Text('${t.from} · ${t.seconds} s'),
-              trailing: const Icon(LucideIcons.chevronRight, size: 18),
-              onTap: () => t.photos
-                  ? startProductAd(
-                      context,
-                      seconds: t.seconds,
-                      aspect: t.aspect,
-                    )
-                  : onAsk(
-                      KadrRequest(
-                        KadrMode.montage,
-                        aspect: t.aspect,
-                        seconds: t.seconds,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const PageHeader('Shablonlar'),
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                itemCount: VideoTemplate.all.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                itemBuilder: (context, i) {
+                  final t = VideoTemplate.all[i];
+                  return Material(
+                    color: p.surface,
+                    borderRadius: BorderRadius.circular(18),
+                    child: ListTile(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
                       ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 6,
+                      ),
+                      leading: Icon(t.icon, color: p.accent),
+                      title: Text(t.title),
+                      subtitle: Text('${t.from} · ${t.seconds} s'),
+                      trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                      onTap: () => t.photos
+                          ? startProductAd(
+                              context,
+                              seconds: t.seconds,
+                              aspect: t.aspect,
+                            )
+                          : onAsk(
+                              KadrRequest(
+                                KadrMode.montage,
+                                aspect: t.aspect,
+                                seconds: t.seconds,
+                              ),
+                            ),
                     ),
+                  );
+                },
+              ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }

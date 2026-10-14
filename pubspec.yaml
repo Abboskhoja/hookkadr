@@ -24,6 +24,7 @@ dependencies:
     path: packages/kadr_diffusion
   kadr_llm:
     path: packages/kadr_llm
+  liquid_glass_easy: 4.3.4
   lucide_icons_flutter: ^3.1.24
   path_provider: ^2.1.6
   share_plus: ^13.3.1

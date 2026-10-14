@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../app/app_controller.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/common.dart';
 import '../../../core/widgets/render_player.dart';
 import '../../ai/ai_clients.dart';
 import '../../editor/editor_screen.dart';
@@ -362,61 +363,68 @@ class AdResultScreen extends StatelessWidget {
     final p = context.palette;
     final c = result.copy;
     return Scaffold(
-      appBar: AppBar(title: const Text('Reklama tayyor')),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        child: Column(
           children: [
-            AspectRatio(
-              aspectRatio: 9 / 13,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: ColoredBox(
-                  color: Colors.black,
-                  child: File(result.outputPath).existsSync()
-                      ? RenderPlayer(
-                          path: result.outputPath,
-                          posterAt: const Duration(milliseconds: 1200),
-                        )
-                      : const Center(child: Text('Video topilmadi')),
-                ),
+            const PageHeader('Reklama tayyor'),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                children: [
+                  AspectRatio(
+                    aspectRatio: 9 / 13,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: ColoredBox(
+                        color: Colors.black,
+                        child: File(result.outputPath).existsSync()
+                            ? RenderPlayer(
+                                path: result.outputPath,
+                                posterAt: const Duration(milliseconds: 1200),
+                              )
+                            : const Center(child: Text('Video topilmadi')),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    result.copyByAi
+                        ? 'Matnni Kadr AI telefonda yozdi'
+                        : 'Neytral shablon matn (Kadr AI o‘rnatilmagan)',
+                    style: AppText.caption(context),
+                  ),
+                  const SizedBox(height: 6),
+                  for (final line in [c.hook, ...c.lines, c.cta])
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('•  $line', style: AppText.body(context)),
+                    ),
+                  const SizedBox(height: 18),
+                  FilledButton.icon(
+                    onPressed: () => _save(context),
+                    icon: const Icon(LucideIcons.download, size: 18),
+                    label: const Text('Galereyaga saqlash'),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      CupertinoPageRoute<void>(
+                        builder: (_) =>
+                            EditorScreen(projectId: result.projectId),
+                      ),
+                    ),
+                    icon: const Icon(LucideIcons.scissors, size: 18),
+                    label: const Text('Tahrirlash'),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => SharePlus.instance.share(
+                      ShareParams(files: [XFile(result.outputPath)]),
+                    ),
+                    icon: Icon(LucideIcons.share2, size: 18, color: p.accent),
+                    label: const Text('Ulashish'),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              result.copyByAi
-                  ? 'Matnni Kadr AI telefonda yozdi'
-                  : 'Neytral shablon matn (Kadr AI o‘rnatilmagan)',
-              style: AppText.caption(context),
-            ),
-            const SizedBox(height: 6),
-            for (final line in [c.hook, ...c.lines, c.cta])
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text('•  $line', style: AppText.body(context)),
-              ),
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: () => _save(context),
-              icon: const Icon(LucideIcons.download, size: 18),
-              label: const Text('Galereyaga saqlash'),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                CupertinoPageRoute<void>(
-                  builder: (_) => EditorScreen(projectId: result.projectId),
-                ),
-              ),
-              icon: const Icon(LucideIcons.scissors, size: 18),
-              label: const Text('Tahrirlash'),
-            ),
-            TextButton.icon(
-              onPressed: () => SharePlus.instance.share(
-                ShareParams(files: [XFile(result.outputPath)]),
-              ),
-              icon: Icon(LucideIcons.share2, size: 18, color: p.accent),
-              label: const Text('Ulashish'),
             ),
           ],
         ),

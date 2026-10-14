@@ -907,3 +907,16 @@ tablet ikki ustunli layout, Riverpod/go_router migratsiyasi, backend.
 - **Skrinshot sayohati**: `flutter drive --driver=test_driver/screenshot_driver.dart --target=integration_test/ui_tour_test.dart` → `build/screenshots/`.
 - Rassomni Q8 GGUF'ga oldindan aylantirish sinaldi: 2,13→1,80 GB, xotira 2,0→1,6 GB, lekin sekinroq (14→17 s); yuklashdagi Q8 xuddi shu xotira foydasini beradi, shuning uchun qo'shilmadi.
 
+
+### 2026-10-14 — Kadr AI Android'da + RAM sinfi tuzatildi
+
+- **Android build tuzatildi**: `kadr_llm`/`kadr_diffusion` plaginlarida `android/` yo'q edi — `flutter build apk` umuman yig'ilmasdi. Endi oldindan yig'ilgan `.so` (NDK 28, arm64, 16 KB sahifa, faqat `kadr_*` eksport, ggml/libc++ yashirin) `android/src/main/jniLibs` ichida; `packages/*/tool/build_android.sh` qayta yig'adi.
+- Ikki CPU varianti: `libkadr_*.so` (armv8.2 dotprod + fp16, tekshirildi: 1110 `sdot`) va `libkadr_*_compat.so` (armv8-a). Dart `/proc/cpuinfo`'ga qarab tanlaydi — eski yadroda SIGILL yo'q. Rassom Android'da 4 oqimda (katta yadrolar).
+- **RAM sinfi**: telefonlar xotirani sotilganidan kam ko'rsatadi ("8 GB" iPhone 15 Pro ≈ 7,45 GiB). Avval aniq GiB bilan solishtirilardi — 8 GB telefonlarda jonli video va miya+rassom birga turishi o'chib qolardi. Endi `ramClassAtLeast` (×0,8) bilan.
+- Cheklov: Android qurilma/emulyatorda ishga tushirilmagan; GPU (Vulkan) yo'q.
+
+### 2026-10-15 — AppBar ko'rinmaydi
+
+- Hech bir ekranda app bar yo'q: sarlavha sahifaning o'zida (`PageHeader`, `lib/core/widgets/common.dart`), ichki ekranlarda yumaloq "orqaga" tugmasi. Suhbat ekranida yuqori panel o'rniga faqat yumaloq tugmalar (menyu, yangi suhbat, profil) — panel foni va "Kadr AI" sarlavhasi yo'q.
+- Real-ESRGAN (x4plus_anime_6B, 17 MB) bilan rasmni kattalashtirish sinaldi: 448×768 → 896×1536 M2 kompyuterda 65–85 s (46 s kichik rasmda). Telefonda undan ham sekin, shuning uchun qo'shilmadi.
+

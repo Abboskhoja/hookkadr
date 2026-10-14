@@ -320,12 +320,11 @@ class AppController extends ChangeNotifier implements ProjectRepository {
   /// The packs this phone should have: what its memory can run.
   List<KadrModelPack> get wantedPacks {
     final ram = _deviceRam();
-    bool fits(KadrModelPack p) => ram <= 0 || ram >= p.minRamBytes;
     return [
-      if (fits(KadrModelPack.brain)) KadrModelPack.brain,
-      if (fits(KadrModelPack.painter)) KadrModelPack.painter,
-      if (fits(KadrModelPack.motion)) KadrModelPack.motion,
-    ];
+      KadrModelPack.brain,
+      KadrModelPack.painter,
+      KadrModelPack.motion,
+    ].where((p) => p.fitsRam(ram)).toList();
   }
 
   /// Everything Kadr AI should have on this phone is in place.

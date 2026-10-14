@@ -498,11 +498,19 @@ class _EditorScreenState extends State<EditorScreen> {
     final p = context.palette;
     if (project == null) {
       return Scaffold(
-        appBar: AppBar(),
-        body: const EmptyState(
-          icon: LucideIcons.film,
-          title: 'Loyiha topilmadi',
-          message: 'U o‘chirilgan bo‘lishi mumkin.',
+        body: const SafeArea(
+          child: Column(
+            children: [
+              PageHeader('Loyiha'),
+              Expanded(
+                child: EmptyState(
+                  icon: LucideIcons.film,
+                  title: 'Loyiha topilmadi',
+                  message: 'U o‘chirilgan bo‘lishi mumkin.',
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -511,11 +519,19 @@ class _EditorScreenState extends State<EditorScreen> {
       plan = EditPlan.fromJson(project.planJson);
     } on EditPlanFormatException catch (e) {
       return Scaffold(
-        appBar: AppBar(),
-        body: EmptyState(
-          icon: LucideIcons.triangleAlert,
-          title: 'Reja buzilgan',
-          message: e.message,
+        body: SafeArea(
+          child: Column(
+            children: [
+              const PageHeader('Loyiha'),
+              Expanded(
+                child: EmptyState(
+                  icon: LucideIcons.triangleAlert,
+                  title: 'Reja buzilgan',
+                  message: e.message,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }

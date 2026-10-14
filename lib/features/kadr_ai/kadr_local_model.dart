@@ -42,7 +42,7 @@ class KadrLocalModel implements GrammarTextModel {
       try {
         // Phones under 8 GB cannot hold the brain and the painter at once.
         final ram = kadrDeviceRamBytes();
-        if (ram > 0 && ram < 8 * 1024 * 1024 * 1024) KadrPainter.unload();
+        if (!ramClassAtLeast(ram, 8 << 30)) KadrPainter.unload();
         final llm = await KadrLlm.load(
           file.path,
           contextSize: pack.contextSize,

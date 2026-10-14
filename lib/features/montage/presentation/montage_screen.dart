@@ -9,6 +9,7 @@ import '../../../app/app_controller.dart';
 import '../../../core/format.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/option_pill.dart';
+import '../../../core/widgets/common.dart';
 import '../../../core/widgets/render_player.dart';
 import '../../ai/ai_clients.dart';
 import '../../analysis/domain/edit_plan.dart';
@@ -180,29 +181,35 @@ class _MontageScreenState extends State<MontageScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Montaj'),
-      actions: [
-        if (_phase == _Phase.done)
-          IconButton(
-            tooltip: 'Yangi montaj',
-            onPressed: () => setState(() {
-              _clips.clear();
-              _phase = _Phase.setup;
-              _render = null;
-              _projectId = null;
-              _saved = false;
-            }),
-            icon: const Icon(LucideIcons.rotateCcw),
-          ),
-      ],
-    ),
     body: SafeArea(
-      child: switch (_phase) {
-        _Phase.setup => _setup(context),
-        _Phase.working => _working(context),
-        _Phase.done => _done(context),
-      },
+      child: Column(
+        children: [
+          PageHeader(
+            'Montaj',
+            actions: [
+              if (_phase == _Phase.done)
+                IconButton(
+                  tooltip: 'Yangi montaj',
+                  onPressed: () => setState(() {
+                    _clips.clear();
+                    _phase = _Phase.setup;
+                    _render = null;
+                    _projectId = null;
+                    _saved = false;
+                  }),
+                  icon: const Icon(LucideIcons.rotateCcw),
+                ),
+            ],
+          ),
+          Expanded(
+            child: switch (_phase) {
+              _Phase.setup => _setup(context),
+              _Phase.working => _working(context),
+              _Phase.done => _done(context),
+            },
+          ),
+        ],
+      ),
     ),
   );
 

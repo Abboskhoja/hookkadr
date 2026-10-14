@@ -9,6 +9,7 @@ To'liq hujjat: `docs/HOOKKADR_BLUEPRINT.md` (mahsulot, dizayn tokenlari, arxitek
 - AI faqat `EditPlan` yozadi; video `lib/features/render/render_plan.dart` orqali FFmpeg'da yig'iladi.
 - API kalitlari kodda bo'lmaydi; ishlamaydigan funksiyani ishlayotgandek ko'rsatma.
 - Foydalanuvchiga ko'rinadigan matnlar o'zbekcha (lotin).
-- Palitra manbasi: `lib/core/theme/app_theme.dart` (ko'k + och jigarrang, krem fon; och mavzu asosiy, video muharriri to'q). Boshqa vosita bilan bir vaqtda tahrirlama.
+- Palitra manbasi: `lib/core/theme/app_theme.dart` (ko‘k + och jigarrang, krem fon; och mavzu asosiy, video muharriri to‘q). AppBar yo‘q: sarlavha `PageHeader` bilan sahifaning ichida. Boshqa vosita bilan bir vaqtda tahrirlama.
 - Kadr AI modellari: foydalanuvchi o'rnatmaydi — ilova ichida (`tool/bundle_kadr_models.sh`) yoki birinchi ishga tushishda avtomatik (Wi-Fi).
+- Native runtime: iOS `packages/*/tool/build_ios.sh`, Android `packages/*/tool/build_android.sh` (NDK, arm64).
 - Server: `server/` (Node 26 TS). `cd server && npm test`; dev: `DEV_AUTH=1 PROVIDERS=fake PORT=8787 npm start`. AI kalitlari faqat serverda.

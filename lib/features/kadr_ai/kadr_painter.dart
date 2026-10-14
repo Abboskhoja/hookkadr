@@ -130,8 +130,9 @@ class KadrPainter implements ImageGenerator {
   static const steps = 4;
   static const cfg = 1.5;
 
-  /// Below this, the brain and the painter never stay loaded together.
-  static const _sharedRamBytes = 8 * 1024 * 1024 * 1024;
+  /// Below this phone class, the brain and the painter never stay loaded
+  /// together.
+  static const _sharedRamBytes = 8 << 30;
 
   Future<bool> get installed => manager.isInstalled(KadrModelPack.painter);
   Future<bool> get motionInstalled => manager.isInstalled(KadrModelPack.motion);
@@ -157,7 +158,7 @@ class KadrPainter implements ImageGenerator {
     return _loading = () async {
       try {
         final ram = kadrDeviceRamBytes();
-        if (ram > 0 && ram < _sharedRamBytes) KadrLocalModel.unload();
+        if (!ramClassAtLeast(ram, _sharedRamBytes)) KadrLocalModel.unload();
         _sd?.dispose();
         _sd = null;
         final model = await manager.fileFor(KadrModelPack.painter);
@@ -171,6 +172,9 @@ class KadrPainter implements ImageGenerator {
               : null,
           // Q8 weights halve memory and keep SD 1.5 quality.
           weights: SdWeights.q8,
+          // Android phones pair 4 fast cores with slow ones; work split
+          // onto the slow cores holds every step back.
+          threads: Platform.isAndroid ? 4 : 0,
         );
         _sd = sd;
         _sdHasMotion = motion;
