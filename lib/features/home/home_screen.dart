@@ -9,7 +9,9 @@ import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/poster.dart';
 import '../chat/chat_screen.dart';
+import 'studio_hero.dart';
 import '../editor/editor_screen.dart';
+import '../montage/presentation/montage_screen.dart';
 import '../product_ad/presentation/product_ad_flow.dart';
 
 /// Home: one place to start anything, in plain words.
@@ -90,6 +92,55 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+              sliver: SliverToBoxAdapter(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.all(22),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  onPressed: () => Navigator.of(context).push(
+                    CupertinoPageRoute<void>(
+                      builder: (_) => const MontageScreen(),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.plus, size: 32),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Yangi loyiha',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 21,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Video tanlang va montajni boshlang',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: p.onAccent,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(LucideIcons.chevronRight, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             if (!app.kadrReady)
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
@@ -115,7 +166,11 @@ class HomeScreen extends StatelessWidget {
                     crossAxisCount: c.crossAxisExtent >= 600 ? 4 : 2,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    mainAxisExtent: 142,
+                    mainAxisExtent:
+                        164 *
+                        MediaQuery.textScalerOf(context)
+                            .scale(1)
+                            .clamp(1.0, 1.8),
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (_, i) => _QuickCard(action: actions[i]),
@@ -229,7 +284,7 @@ class _QuickCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    final tint = action.warm ? AppColors.brown : AppColors.blue;
+    final tint = action.warm ? const Color(0xFFE7B985) : p.accent;
     return Semantics(
       button: true,
       label: action.title,
@@ -264,9 +319,10 @@ class _QuickCard extends StatelessWidget {
                 const Spacer(),
                 Text(
                   action.title,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
+                    fontFamily: 'Inter',
                     color: p.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -275,7 +331,7 @@ class _QuickCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   action.hint,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: AppText.caption(context).copyWith(fontSize: 12.5),
                 ),
@@ -292,125 +348,28 @@ class _Hero extends StatelessWidget {
   const _Hero({required this.onAsk});
   final ValueChanged<KadrRequest> onAsk;
 
-  static const _ideas = [
-    ('Kafe uchun reklama video', KadrMode.video),
-    ('Tog‘ manzarasi rasmi', KadrMode.image),
-    ('Reels uchun 5 ta g‘oya', KadrMode.question),
-  ];
-
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-    decoration: BoxDecoration(
-      gradient: AppColors.brandGradient,
-      borderRadius: BorderRadius.circular(26),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x332563C9),
-          blurRadius: 24,
-          offset: Offset(0, 10),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Nima yaratamiz?',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 27,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.4,
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Kadr AI’ga o‘z so‘zingiz bilan yozing.',
-          style: TextStyle(color: Colors.white, fontSize: 15),
-        ),
-        const SizedBox(height: 16),
-        Semantics(
-          button: true,
-          label: 'Kadr AI bilan boshlash',
-          child: GestureDetector(
-            onTap: () => onAsk(const KadrRequest(null)),
-            child: Container(
-              height: 54,
-              padding: const EdgeInsets.only(left: 16, right: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(27),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    LucideIcons.sparkles,
-                    size: 18,
-                    color: AppColors.blue,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'G‘oyangizni yozing…',
-                      style: TextStyle(
-                        color: context.palette.textSecondary,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: AppColors.blue,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      LucideIcons.arrowRight,
-                      size: 17,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      StudioHero(onStart: () => onAsk(const KadrRequest(null))),
+      const SizedBox(height: 12),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final (text, mode) in const [
+            ('Kafe uchun reklama video', KadrMode.video),
+            ('Tog‘ manzarasi rasmi', KadrMode.image),
+            ('Reels uchun 5 ta g‘oya', KadrMode.question),
+          ])
+            ActionChip(
+              label: Text(text),
+              onPressed: () => onAsk(KadrRequest(mode, text: text)),
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final (text, mode) in _ideas)
-              Semantics(
-                button: true,
-                child: GestureDetector(
-                  onTap: () => onAsk(KadrRequest(mode, text: text)),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.cream,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      text,
-                      style: const TextStyle(
-                        color: AppColors.brown,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ],
-    ),
+        ],
+      ),
+    ],
   );
 }
 
@@ -439,14 +398,14 @@ class _SetupBanner extends StatelessWidget {
       ),
       _ => (
         'Kadr AI tayyorlanmoqda',
-        'Bir martalik. Keyin hammasi internetsiz ishlaydi.',
+        'Mahalliy AI modellari tayyor bo‘lgach, internetsiz ishlaydi.',
       ),
     };
     final waiting = app.setupState == KadrSetupState.waitingForWifi;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: AppColors.warmGradient,
+        color: p.surfaceRaised,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: p.separator, width: 0.8),
       ),
@@ -553,6 +512,7 @@ class _AiStatus extends StatelessWidget {
                       ? 'Kadr AI ${(progress * 100).round()}%'
                       : 'Kadr AI',
                   style: TextStyle(
+                    fontFamily: 'Inter',
                     color: p.textPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,

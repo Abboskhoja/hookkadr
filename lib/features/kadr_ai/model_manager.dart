@@ -27,8 +27,12 @@ class DownloadToken {
 /// rehash gigabytes. A file that fails the check is deleted, never used.
 ///
 /// Packs shipped inside the app (iOS: `Runner.app/KadrModels`, prepared by
-/// `tool/bundle_kadr_models.sh`, SHA-256 checked at build time) are used in
-/// place: nothing to download, copy or install.
+/// `tool/bundle_kadr_models.sh`, SHA-256 checked at build time; Android: the
+/// app's own external files dir, pushed ahead of time by
+/// `tool/push_kadr_models_android.sh` for a direct/sideloaded install — no
+/// store size cap to route around, but nothing short enough to ship through
+/// Play Store either) are used in place: nothing to download, copy or
+/// install.
 class KadrModelManager {
   KadrModelManager({
     Future<Directory> Function()? root,
@@ -41,9 +45,22 @@ class KadrModelManager {
   final Directory? Function() _bundled;
 
   static Directory? _defaultBundled() {
-    if (!Platform.isIOS) return null;
-    final app = File(Platform.resolvedExecutable).parent.path;
-    return Directory('$app/KadrModels');
+    if (Platform.isIOS) {
+      final app = File(Platform.resolvedExecutable).parent.path;
+      return Directory('$app/KadrModels');
+    }
+    if (Platform.isAndroid) {
+      // The app's own external files dir — no storage permission needed
+      // (API 19+) and, unlike app-internal storage, reachable by `adb push`
+      // before the app has ever run. Built from the well-known primary
+      // external storage path and the app's own package name rather than
+      // a path_provider call, so this stays the synchronous check every
+      // other bundled-pack lookup in this class already is.
+      return Directory(
+        '/storage/emulated/0/Android/data/com.hookkadr.hookkadr/files/KadrModels',
+      );
+    }
+    return null;
   }
 
   /// The pack's file inside the app bundle, if the build shipped it.

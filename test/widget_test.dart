@@ -61,14 +61,11 @@ void main() {
     await tester.pumpWidget(HookkadrApp(controller: controller));
     await _settle(tester);
 
-    expect(find.text('Nima yaratamiz?'), findsOneWidget);
+    expect(find.text('Yangi loyiha'), findsOneWidget);
     // Kadr AI prepares itself: an honest status, no install step (the
     // banner, and the image card says the same).
     expect(find.text('Kadr AI tayyorlanmoqda'), findsWidgets);
     for (final t in [
-      'Rasmlardan reklama',
-      'AI video',
-      'Reels uchun 5 ta g‘oya',
       'Bosh sahifa',
       'AI Studiya',
       'Loyihalar',
@@ -117,6 +114,12 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(HookkadrApp(controller: controller));
     await _settle(tester);
+    await tester.scrollUntilVisible(
+      find.text('Reels uchun 5 ta g‘oya'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await _settle(tester);
     await tester.tap(find.text('Reels uchun 5 ta g‘oya'));
     await _settle(tester);
     // AI Studio opens in question mode with the idea already typed.
@@ -144,6 +147,12 @@ void main() {
       'Reels montaj',
       'Kino uslubida',
     ]) {
+      await tester.scrollUntilVisible(
+        find.text(t),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await _settle(tester);
       expect(find.text(t), findsOneWidget, reason: t);
     }
     await tester.tap(find.text('Profil'));
@@ -255,11 +264,14 @@ void main() {
     await _teardown(tester);
   });
 
-  testWidgets('dark is the default theme', (tester) async {
+  testWidgets('light is the default theme, even on a dark-mode phone', (
+    tester,
+  ) async {
     final controller = await _controller(onboarded: true);
     final dispatcher = tester.platformDispatcher;
     addTearDown(dispatcher.clearPlatformBrightnessTestValue);
-    dispatcher.platformBrightnessTestValue = Brightness.light;
+    // The phone is in dark mode; the app still opens light (user's choice).
+    dispatcher.platformBrightnessTestValue = Brightness.dark;
     tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -268,7 +280,7 @@ void main() {
     final bg = tester
         .widget<Scaffold>(find.byType(Scaffold).first)
         .backgroundColor;
-    expect(bg ?? AppPalette.dark.background, AppPalette.dark.background);
+    expect(bg ?? AppPalette.light.background, AppPalette.light.background);
     expect(find.byKey(const ValueKey('brand-logo')), findsOneWidget);
     await _teardown(tester);
   });

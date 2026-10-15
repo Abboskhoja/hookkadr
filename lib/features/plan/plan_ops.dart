@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import '../analysis/domain/edit_plan.dart';
 
@@ -52,17 +53,30 @@ abstract final class PlanOps {
   static int _index(List<Map<String, dynamic>> shots, String id) =>
       shots.indexWhere((s) => s['id'] == id);
 
+  /// Sets a shot's timeline length (the right-edge trim). With
+  /// [sourceLimit] — the source clip's length in seconds — the shot never
+  /// reaches past the end of its footage.
   static Map<String, dynamic> resizeShot(
     Map<String, dynamic> plan,
     String shotId,
-    double newDuration,
-  ) {
+    double newDuration, {
+    double? sourceLimit,
+  }) {
     final p = _copy(plan);
     final shots = _shots(p);
-    final d = newDuration.clamp(minShot, maxShot).toDouble();
-    for (final s in shots) {
-      if (s['id'] == shotId) _setDuration(s, d);
+    final i = _index(shots, shotId);
+    if (i < 0) return p;
+    final s = shots[i];
+    var upper = maxShot;
+    if (sourceLimit != null && s['sourceIn'] != null) {
+      final cap = (sourceLimit - _num(s['sourceIn'])) / _speed(s);
+      upper = cap.clamp(minShot, maxShot).toDouble();
     }
+    final d = newDuration.clamp(minShot, upper).toDouble();
+    final oldStart = _num(s['startSec']);
+    final oldEnd = _num(s['endSec']);
+    _setDuration(s, d);
+    _anchorCaptions(p, oldStart, oldEnd, oldStart + d - oldEnd);
     return _ripple(p, shots);
   }
 
@@ -152,12 +166,17 @@ abstract final class PlanOps {
     if (s['sourceIn'] == null) return p;
     final dur = _dur(s);
     final sp = _speed(s);
+    // Revealing earlier footage never grows the shot past [maxShot].
+    final lowest = math.max(0.0, _num(s['sourceIn']) - (maxShot - dur) * sp);
     final newIn = (_num(s['sourceIn']) + deltaSec)
-        .clamp(0.0, _num(s['sourceIn']) + (dur - minShot) * sp)
+        .clamp(lowest, _num(s['sourceIn']) + (dur - minShot) * sp)
         .toDouble();
     final change = (newIn - _num(s['sourceIn'])) / sp; // timeline seconds
+    final oldStart = _num(s['startSec']);
+    final oldEnd = _num(s['endSec']);
     s['sourceIn'] = _r(newIn);
-    s['endSec'] = _num(s['startSec']) + dur - change;
+    s['endSec'] = oldStart + dur - change;
+    _anchorCaptions(p, oldStart, oldEnd, -change);
     return _ripple(p, shots, keepOrder: true);
   }
 
@@ -457,6 +476,44 @@ abstract final class PlanOps {
       _setDuration(s, newDurations[i]);
     }
     return _ripple(p, shots, keepOrder: true);
+  }
+
+  /// Captions are anchored to the shots they sit on (like connected titles
+  /// in a magnetic timeline): when the shot spanning [oldStart, oldEnd]
+  /// changes length by [delta], captions that start after it shift with it,
+  /// a caption crossing its end stretches/shrinks with it, and a caption
+  /// inside it is clipped to the shot's new end (dropped if nothing is left).
+  /// Audio tracks (music/voice beds) stay at their absolute times.
+  /// Call before [_ripple], which then clips everything to the new length.
+  static void _anchorCaptions(
+    Map<String, dynamic> p,
+    double oldStart,
+    double oldEnd,
+    double delta,
+  ) {
+    final list = (p['captions'] as List?)?.cast<Map<String, dynamic>>();
+    if (list == null || delta.abs() < 1e-9) return;
+    const eps = 1e-6;
+    final newEnd = oldEnd + delta;
+    final out = <Map<String, dynamic>>[];
+    for (final c in list) {
+      final s = _num(c['startSec']);
+      final e = _num(c['endSec']);
+      Map<String, dynamic> moved;
+      if (s >= oldEnd - eps) {
+        moved = {...c, 'startSec': _r(s + delta), 'endSec': _r(e + delta)};
+      } else if (e > oldEnd + eps) {
+        moved = {...c, 'endSec': _r(e + delta)};
+      } else if (s >= oldStart - eps && e > newEnd) {
+        moved = {...c, 'endSec': _r(newEnd)};
+      } else {
+        moved = c;
+      }
+      if (_num(moved['endSec']) - _num(moved['startSec']) >= 0.1) {
+        out.add(moved);
+      }
+    }
+    p['captions'] = out;
   }
 
   static Map<String, dynamic> _ripple(

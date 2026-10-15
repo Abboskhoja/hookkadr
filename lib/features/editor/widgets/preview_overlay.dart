@@ -16,7 +16,19 @@ class PreviewOverlay extends StatelessWidget {
   final bool hasVideo;
 
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) => FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.topCenter,
+      child: SizedBox(
+        width: box.maxWidth.clamp(180.0, double.infinity),
+        height: box.maxHeight.clamp(240.0, double.infinity),
+        child: _content(),
+      ),
+    ),
+  );
+
+  Widget _content() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Container(

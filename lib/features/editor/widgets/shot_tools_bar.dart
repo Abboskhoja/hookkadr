@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'tool_button.dart';
+import '../../../core/theme/editor_tokens.dart';
 
 /// Tools for the selected shot: icon-only (tooltip = name for long press
 /// and screen readers), disabled when the action is not possible.
@@ -41,7 +42,7 @@ class ShotToolsBar extends StatelessWidget {
     Widget tool(IconData icon, String name, bool enabled, VoidCallback onTap) =>
         ToolButton(icon: icon, label: name, onTap: enabled ? onTap : null);
     return SizedBox(
-      height: 74,
+      height: EditorTokens.toolbarHeight,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 8),

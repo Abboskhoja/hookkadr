@@ -21,6 +21,7 @@ import '../features/ai/plan_generator.dart';
 import '../features/chat/chat_models.dart';
 import '../features/montage/application/montage_service.dart';
 import '../features/projects/project.dart';
+import '../features/projects/project_store.dart';
 
 abstract class KeyStore {
   Future<String?> read(String key);
@@ -29,7 +30,20 @@ abstract class KeyStore {
 
 class SecureKeyStore implements KeyStore {
   const SecureKeyStore();
-  static const _s = FlutterSecureStorage();
+
+  // Keys never leave this device: iOS's default Keychain accessibility
+  // travels with an encrypted iTunes/Finder backup and restores on a new
+  // phone; `first_unlock_this_device` keeps it off any backup. Android's
+  // EncryptedSharedPreferences default is already device-only (its AES key
+  // lives in the Keystore, which backup/restore cannot carry over), and
+  // AndroidManifest's `allowBackup="false"` plus the API 31+ extraction
+  // rules close the remaining Android backup/transfer paths at the app
+  // level.
+  static const _s = FlutterSecureStorage(
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+  );
 
   @override
   Future<String?> read(String key) async {
@@ -127,7 +141,10 @@ class AppController extends ChangeNotifier implements ProjectRepository {
 
   final KeyStore keys;
   final SharedPreferences prefs;
-  static const _projectsKey = 'projects_v1';
+  late final _projectStore = ProjectStore(
+    read: prefs.getString,
+    write: prefs.setString,
+  );
 
   List<Project> projects = [];
   List<ChatRecord> chats = [];
@@ -549,16 +566,7 @@ class AppController extends ChangeNotifier implements ProjectRepository {
     }
     final pref = prefs.getString('preferred_provider');
     preferred = ProviderKind.values.where((k) => k.name == pref).firstOrNull;
-    final raw = prefs.getString(_projectsKey);
-    if (raw != null) {
-      try {
-        projects = (jsonDecode(raw) as List)
-            .map((e) => Project.fromJson(e as Map<String, dynamic>))
-            .toList();
-      } catch (_) {
-        projects = [];
-      }
-    }
+    projects = _projectStore.load();
     final rawChats = prefs.getString('chats_v1');
     if (rawChats != null) {
       try {
@@ -695,7 +703,12 @@ class AppController extends ChangeNotifier implements ProjectRepository {
           p.copyWith(
             clips: [...p.clips, ...clips],
             planJson: plan,
-            history: [...p.history, p.planJson],
+            history: () {
+              final next = [...p.history, p.planJson];
+              return next.length > Project.maxHistory
+                  ? next.sublist(next.length - Project.maxHistory)
+                  : next;
+            }(),
           )
         else
           p,
@@ -746,10 +759,7 @@ class AppController extends ChangeNotifier implements ProjectRepository {
   }
 
   Future<void> _persist() async {
-    await prefs.setString(
-      _projectsKey,
-      jsonEncode(projects.map((p) => p.toJson()).toList()),
-    );
+    await _projectStore.save(projects);
     notifyListeners();
   }
 }

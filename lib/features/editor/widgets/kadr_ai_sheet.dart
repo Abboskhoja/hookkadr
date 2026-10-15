@@ -16,8 +16,7 @@ import '../../render/media_analyzer.dart';
 import '../../vision/scene_quality_scanner.dart';
 
 /// Kadr AI bottom sheet: natural-language edit commands. The offline command
-/// agent executes deterministic edits instantly; only when it understands
-/// nothing does a connected LLM propose a full plan for review.
+/// agent and connected LLM both propose edits for explicit user approval.
 class KadrAiSheet extends StatefulWidget {
   const KadrAiSheet({
     super.key,
@@ -42,7 +41,7 @@ class _KadrAiSheetState extends State<KadrAiSheet> {
   bool _busy = false;
   String? _error;
 
-  /// Offline agent commands run immediately; this is what they did.
+  /// Report of the last applied command or non-mutating analysis.
   List<String> _done = const [];
   List<String> _unhandled = const [];
   List<QcFinding> _findings = const [];
@@ -57,10 +56,11 @@ class _KadrAiSheetState extends State<KadrAiSheet> {
     '9:16 qil',
   ];
 
-  /// LLM proposal waiting for Apply/Cancel, with what it would change.
+  /// Local or online proposal waiting for Apply/Cancel.
   Map<String, dynamic>? _proposal;
   String? _baseSignature;
   List<String> _changes = const [];
+  List<String> _proposedReport = const [];
 
   @override
   void dispose() {
@@ -68,12 +68,13 @@ class _KadrAiSheetState extends State<KadrAiSheet> {
     super.dispose();
   }
 
-  /// Kadr AI: first the offline command agent (instant, executes for real);
-  /// only when it understood nothing, the connected LLM proposes a plan.
+  /// Prefer offline planning; use a connected provider only as a fallback.
   Future<void> _run(String text) async {
     final app = AppScope.of(context);
     final project = app.byId(widget.projectId);
     if (project == null || text.trim().isEmpty) return;
+    final basePlan = project.planJson;
+    final baseSignature = planSignature(basePlan);
     final director = KadrDirector(
       connected: {
         for (final k in ProviderKind.values)
@@ -105,11 +106,12 @@ class _KadrAiSheetState extends State<KadrAiSheet> {
       return;
     }
     if (rep.changedPlan) {
-      widget.onApplied(project.planJson);
-      await app.updatePlan(project.id, rep.plan);
-      if (!mounted) return;
       setState(() {
-        _done = rep.done;
+        _proposal = rep.plan;
+        _baseSignature = baseSignature;
+        _changes = describePlanDiff(basePlan, rep.plan);
+        _proposedReport = rep.done;
+        _done = const [];
         _unhandled = rep.blocked;
         _findings = rep.findings;
         _error = null;
@@ -155,8 +157,9 @@ class _KadrAiSheetState extends State<KadrAiSheet> {
       if (!mounted) return;
       setState(() {
         _proposal = updated;
-        _baseSignature = planSignature(project.planJson);
-        _changes = describePlanDiff(project.planJson, updated);
+        _baseSignature = baseSignature;
+        _changes = describePlanDiff(basePlan, updated);
+        _proposedReport = _changes;
       });
     } on AiException catch (e) {
       if (mounted) setState(() => _error = e.message);
@@ -179,7 +182,13 @@ class _KadrAiSheetState extends State<KadrAiSheet> {
     }
     widget.onApplied(project.planJson);
     await app.updatePlan(project.id, plan);
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) {
+      setState(() {
+        _proposal = null;
+        _done = _proposedReport;
+        _error = null;
+      });
+    }
   }
 
   @override
@@ -253,7 +262,7 @@ class _KadrAiSheetState extends State<KadrAiSheet> {
       ),
       const SizedBox(height: 4),
       Text(
-        'Buyruq bering — men timeline’da bajaraman.',
+        'Buyruq bering. Rejani ko‘rib, tasdiqlagach qo‘llaysiz.',
         style: AppText.caption(context),
       ),
       const SizedBox(height: 12),

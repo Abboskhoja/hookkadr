@@ -134,7 +134,10 @@ void main() {
       expect(AdCopy.fit('Yangi (2026) kolleksiya'), 'Yangi (2026) kolleksiya');
       // The video font has no emoji: they would render as empty boxes.
       expect(AdCopy.fit('🌟 Qo‘lda tikilgan sifat ✨'), 'Qo‘lda tikilgan sifat');
-      expect(AdCopy.fit('👜 Har bir sumka o‘ziga xos'), 'Har bir sumka o‘ziga xos');
+      expect(
+        AdCopy.fit('👜 Har bir sumka o‘ziga xos'),
+        'Har bir sumka o‘ziga xos',
+      );
     });
 
     test('refuses empty hook or call to action', () {
@@ -459,7 +462,7 @@ void main() {
         AppScope(
           controller: app,
           child: MaterialApp(
-            theme: buildTheme(Brightness.dark),
+            theme: buildTheme(Brightness.light),
             home: Builder(
               builder: (context) => Scaffold(
                 body: Center(

@@ -937,3 +937,31 @@ tablet ikki ustunli layout, Riverpod/go_router migratsiyasi, backend.
 - MIUI'da avval o'rnatish `INSTALL_FAILED_USER_RESTRICTED` bilan rad etilgan edi — sabab: "USB nosozliklarini aniqlash (Xavfsizlik sozlamalari)" alohida sozlamasi o'chiq edi (oddiy USB debugging'dan farqli). Foydalanuvchi uni yoqqach o'rnatish ishladi.
 - **Ehtiyot choras**i: bu foydalanuvchining shaxsiy telefoni, unda haqiqiy loyiha va shaxsiy xabarlar (Telegram) bor edi. Qurilmani avtomatik boshqarishda (adb orqali tap) skrinshot masshtabini noto'g'ri hisoblab, bir marta tasodifan Telegram'ga o'tib ketildi (hech narsa o'qilmadi/yuborilmadi, skrinshotlar darhol o'chirildi). **Saboq:** real qurilmada koordinata bilan bosishdan oldin UI elementining aniq joyini (`uiautomator dump` yoki shunga o'xshash) tekshirish kerak, skrinshotni ko'rib taxmin qilib bosish emas; agar qurilmada foydalanuvchining shaxsiy ma'lumotlari bo'lishi mumkin bo'lsa, odatdagidek ehtiyot bo'lish kerak.
 
+### 2026-10-15 — Android to'g'ridan-to'g'ri o'rnatish + xavfsizlik
+
+- **Android modellarni oldindan joylash** (`tool/push_kadr_models_android.sh`, iOS'ning `bundle_kadr_models.sh`iga juft): fayllarni SHA-256 tekshirib, `adb push` orqali ilovaning tashqi fayllar papkasiga (`/sdcard/Android/data/<pkg>/files/KadrModels`, ruxsat so'ralmaydi) joylaydi. `KadrModelManager` buni avval tekshiradi. To'g'ridan-to'g'ri/sinov o'rnatishlar uchun — Play Store'ga ~6,2 GB'lik build yuborib bo'lmaydi, u hamon Wi-Fi orqali avtomatik tayyorlanishga tayanadi.
+- **Xavfsizlik**: `AndroidManifest.xml`da `allowBackup` ko'rsatilmagan edi (standart holatda yoqilgan) — suhbat tarixi va Kadr AI xotirasi Google zaxirasiga tushishi mumkin edi. `allowBackup="false"` + `data_extraction_rules.xml` (cloud-backup va device-transfer'ni ham yopadi, Android 12+). iOS'da `flutter_secure_storage` standart Keychain sozlamasi shifrlangan iTunes/Finder zaxirasi bilan birga ko'chadi — `first_unlock_this_device`ga qattiqlashtirildi, kalitlar endi faqat shu qurilmada qoladi.
+- Boshqa tekshiruv: hardcoded kalit yo'q, barcha so'rovlar HTTPS, server allaqachon rate-limit qilingan.
+
+### 2026-10-15 — Haqiqiy qulash tuzatildi: Kadr AI'ga yozganda manfiy balandlik
+
+- **Topildi:** yangi `integration_test/mobile_flows_test.dart` (shunchaki navigatsiya emas — yozish, yuborish, "Yangi suhbat" kabi haqiqiy harakatlarni sinaydi) orqali: AI Studiya bo'sh holatida (`_EmptyHome`, `chat_screen.dart:1690`) klaviatura chiqqanda bo'sh joy 24px dan kamayib ketsa, `BoxConstraints(minHeight: box.maxHeight - 24)` MANFIY qiymat berib, Flutter'ni qulatar edi — bu `flutter analyze`/mavjud widget testlar sezmagan, chunki ular klaviaturani real ochmaydi. Bu aynan "mobil'da yozganda xato chiqadi" degan shikoyatga mos real xato edi.
+- **Tuzatildi:** `minHeight`ni `0`dan pastga tushmaydigan qilib qisqartirildi (`.clamp(0, double.infinity)`). Endi bo'sh joy qancha kichik bo'lmasin, qulamaydi.
+- Shu test bilan yana ikkita rejim (Savol berish, Rasm yaratish — yozish va yuborish bilan) va provayder ulanmagan holatda "Video yaratish" (aniq xabar bilan to'xtashi, qulamasligi) tekshirildi — hammasi o'tadi.
+- `tool/push_kadr_models_android.sh`da ham haqiqiy xato topildi va tuzatildi: `set -e` fayl hali qurilmada yo'qligini (birinchi push'da normal holat) xato deb hisoblab, skriptni jim to'xtatib qo'yar edi.
+- Haqiqiy Android telefonda katta fayl (`adb push`, ~3 GB) o'tkazishda USB ulanish bir necha marta uzilib qoldi — bu kabel/port muammosi ko'rinadi, hali hal qilinmagan (qurilma qayta ulanganda davom ettiriladi).
+
+### 2026-10-15 — Build tiklandi, och mavzu qayta tasdiqlandi
+
+- Codex parallel ishida `pubspec.yaml`ga `assets/images/template_product.png` qo'shilgan, lekin fayl diskda yo'q edi — `flutter test`, `flutter run` va har qanday build "Failed to build asset bundle" bilan to'xtardi. Rasm Kadr AI'ning o'z rassomi (DreamShaper 8 LCM, `kadr_sd_image`, `PaintStyle.product`) bilan Codex tavsifi bo'yicha chizildi (7 variantdan tanlandi), kelib chiqishi `docs/learning/STUDIO_ARTWORK.md`da.
+- Codex pasted "cinematic dark" hujjat bo'yicha `themeMode`ni `dark`ga o'tkazgan edi; foydalanuvchi och mavzuni aniq tanladi. `ThemeMode.light` qaytarildi; muharrir o'zining to'q `EditorTokens.palette`ida qoladi. Codex'ning foydali o'zgarishlari saqlandi (ichki Inter shrifti — internetsiz; muharrir tokenlari; golden testlar). Bosh sahifa va shablon goldenlari och rangda yangilandi (ko'zdan o'tkazib).
+- `AGENTS.md` qo'shildi: Codex ham `CLAUDE.md` qoidalariga va och mavzu qaroriga amal qilishi uchun.
+- 365 test o'tdi, `flutter analyze` toza, Android debug APK yig'iladi, simulyatorda skrinshotlar tekshirildi.
+
+### 2026-10-15 — Jonli ripple trim (CapCut uslubi)
+
+- `lib/features/plan/ripple_trim.dart` (`RippleTrim.apply`): kadr chetini tortganda har bir harakatda butun reja qayta hisoblanadi — drag boshidagi rejadan, oxirgi preview'dan emas (yaxlitlash to'planmaydi, bekor qilish = preview'ni tashlash). Preview va saqlash bitta `PlanOps` chaqiruvidan o'tadi: ko'rgan narsa = saqlanadigan = eksport qilinadigan.
+- Qoidalar: uzunlik eksport fps'ining butun kadrlarida (24/25/30/60); 0,5–30 s; manba klip oxiridan o'tmaydi (`resizeShot(sourceLimit:)`, `ProjectClip.durationSec`dan); o'ng chet playhead va musiqa beat'lariga ~10 px oynada magnitlanadi (haptic + magnit belgisi + yo'riqchi chiziq); chap trim 2× kadrda timeline sekundini manba sekundiga to'g'ri o'giradi (avval o'girmasdi). Subtitrlar o'z kadriga bog'langan va u bilan siljiydi (avval mutlaq vaqtda qolib, boshqa kadr ustiga tushardi); musiqa/ovoz qatlamlari mutlaq vaqtda; o'tishlarni renderer qo'shnining yarmigacha cheklaydi (test bilan tasdiqlandi). Bitta asosiy video trek — trek qulfi kabi tushunchalar sxemada yo'q.
+- UI: harakatda faqat timeline qayta chiziladi; barmoq ko'tarilganda bitta `onTrimCommit` → bitta Undo qadami, preview tortilgan chetga o'tadi; bekor qilingan gesture hech narsa saqlamaydi. Topilgan va tuzatilgan xato: trim handle'ni bosish playhead'ni o'sha nuqtaga ko'chirardi (va playhead'ga magnitlashni imkonsiz qilardi).
+- Testlar: `test/ripple_trim_test.dart` (21), `test/editor_live_trim_test.dart` (4: jonli siljish saqlashdan oldin, bekor qilish, manba chegarasi, playhead magnit + haptic). Jami 390 test, analyze toza, Android debug APK yig'iladi. Haqiqiy qurilmada barmoq bilan hali sinalmagan.
+

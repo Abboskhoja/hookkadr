@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../core/format.dart';
 
 /// Human-readable list of what changed between two EditPlan JSON maps
@@ -7,6 +9,16 @@ List<String> describePlanDiff(
   Map<String, dynamic> after,
 ) {
   final out = <String>[];
+  for (final entry in const {
+    'production': 'Storyboard',
+    'grade': 'Rang sozlamalari',
+    'music': 'Musiqa sozlamalari',
+    'logo': 'Logotip',
+  }.entries) {
+    if (jsonEncode(before[entry.key]) != jsonEncode(after[entry.key])) {
+      out.add('${entry.value} yangilanadi');
+    }
+  }
   double n(Object? v) => (v as num?)?.toDouble() ?? 0;
 
   final d0 = n(before['durationSec']);
@@ -39,6 +51,18 @@ List<String> describePlanDiff(
   for (final id in b.keys.where(a.containsKey)) {
     final x = a[id]!;
     final y = b[id]!;
+    for (final entry in const {
+      'speed': 'tezlik',
+      'motion': 'harakat',
+      'volume': 'ovoz',
+      'transitionIn': 'o‘tish',
+      'transitionSec': 'o‘tish davomiyligi',
+      'freeze': 'to‘xtatilgan kadr',
+    }.entries) {
+      if (x[entry.key] != y[entry.key]) {
+        out.add('Kadr $id: ${entry.value} yangilanadi');
+      }
+    }
     final dx = n(x['endSec']) - n(x['startSec']);
     final dy = n(y['endSec']) - n(y['startSec']);
     if ((dx - dy).abs() > 0.05) {

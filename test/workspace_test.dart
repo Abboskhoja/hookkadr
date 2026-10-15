@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hookkadr/app/app_controller.dart';
@@ -56,6 +58,55 @@ void main() {
   });
 
   group('versions and current output', () {
+    test('one corrupt project does not hide valid projects', () async {
+      final valid = {
+        'id': 'valid',
+        'name': 'Saqlangan loyiha',
+        'createdAt': DateTime(2026).toIso8601String(),
+        'plan': _plan(),
+        'clips': <Map<String, dynamic>>[],
+        'history': <Map<String, dynamic>>[],
+      };
+      SharedPreferences.setMockInitialValues({
+        'projects_v1': jsonEncode([
+          valid,
+          {'broken': true},
+        ]),
+      });
+      final app = AppController(
+        keys: MemoryKeyStore(),
+        prefs: await SharedPreferences.getInstance(),
+      );
+
+      await app.load();
+
+      expect(app.projects, hasLength(1));
+      expect(app.projects.single.name, 'Saqlangan loyiha');
+      final prefs = await SharedPreferences.getInstance();
+      final original = prefs.getString('projects_v1');
+      await app.rename('valid', 'Yangi nom');
+      expect(jsonDecode(prefs.getString('projects_recovery_v1')!), [original]);
+      final restarted = AppController(keys: MemoryKeyStore(), prefs: prefs);
+      await restarted.load();
+      expect(restarted.projects.single.name, 'Yangi nom');
+    });
+
+    test('clip imports keep undo history bounded', () async {
+      SharedPreferences.setMockInitialValues({});
+      final app = AppController(
+        keys: MemoryKeyStore(),
+        prefs: await SharedPreferences.getInstance(),
+      );
+      final p = await app.addProject(_plan());
+      for (var i = 0; i < Project.maxHistory + 5; i++) {
+        await app.addClips(p.id, [
+          ProjectClip(id: 'c$i', path: '/tmp/c$i.mp4', name: 'c$i'),
+        ], _plan(d2: 6 + i.toDouble()));
+      }
+
+      expect(app.byId(p.id)!.history, hasLength(Project.maxHistory));
+    });
+
     test('updatePlan keeps history and undo restores it', () async {
       SharedPreferences.setMockInitialValues({});
       final app = AppController(

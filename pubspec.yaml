@@ -5,6 +5,7 @@ version: 1.0.0+1
 environment:
   sdk: ^3.13.5
 dependencies:
+  animate_do: ^5.1.0
   connectivity_plus: ^7.3.2
   crypto: ^3.0.7
   cupertino_icons: ^2.0.0
@@ -12,6 +13,7 @@ dependencies:
   file_picker: ^13.1.0
   flutter:
     sdk: flutter
+  flutter_ai_toolkit: ^1.0.0
   flutter_animate: ^4.5.2
   flutter_secure_storage: ^11.2.0
   flutter_web_auth_2: ^5.1.0
@@ -39,7 +41,13 @@ dev_dependencies:
   lints: ^6.0.0
 flutter:
   uses-material-design: true
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
   assets:
     - assets/images/launcher_icon.png
+    - assets/images/studio_hero.png
+    - assets/images/template_product.png
     - assets/fonts/Inter.ttf
     - assets/models/scene_quality.json

@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../app/app_controller.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/editor_tokens.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/poster.dart';
 import '../analysis/domain/edit_plan.dart';
@@ -20,6 +21,7 @@ import 'package:video_player/video_player.dart';
 
 import 'widgets/duration_stepper.dart';
 import 'widgets/editor_timeline.dart';
+import 'widgets/editor_workspace.dart';
 import 'widgets/effects_sheet.dart';
 import 'widgets/kadr_ai_sheet.dart';
 import 'widgets/look_sheet.dart';
@@ -36,7 +38,24 @@ class EditorScreen extends StatefulWidget {
   State<EditorScreen> createState() => _EditorScreenState();
 }
 
-class _EditorScreenState extends State<EditorScreen> {
+class _EditorScreenState extends State<EditorScreen>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed && mounted) {
+      setState(_stop);
+      for (final controller in _vc.values) {
+        if (controller.value.isInitialized) controller.pause();
+      }
+    }
+  }
+
   static const _minPps = 16.0;
   static const _maxPps = 240.0;
   double _pps = 64.0;
@@ -85,6 +104,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     for (final c in _vc.values) {
       c.dispose();
@@ -106,7 +126,9 @@ class _EditorScreenState extends State<EditorScreen> {
       ctl
           .initialize()
           .then((_) {
-            if (mounted) setState(() {});
+            // The route or selected clip can change while initialization is
+            // in flight. Rebuild only for the controller still owned here.
+            if (mounted && identical(_vc[clip.id], ctl)) setState(() {});
           })
           .catchError((Object _) {});
       return;
@@ -125,7 +147,17 @@ class _EditorScreenState extends State<EditorScreen> {
     if (_playing) {
       if (_playingShotId != shot.id) {
         _playingShotId = shot.id;
-        ctl.seekTo(desired).then((_) => ctl!.play());
+        ctl
+            .seekTo(desired)
+            .then((_) {
+              if (mounted &&
+                  _playing &&
+                  _playingShotId == shot.id &&
+                  identical(_vc[clip.id], ctl)) {
+                return ctl!.play();
+              }
+            })
+            .catchError((Object _) {});
       } else if (!ctl.value.isPlaying && posMs < maxMs - 50) {
         ctl.play();
       }
@@ -180,6 +212,10 @@ class _EditorScreenState extends State<EditorScreen> {
     if (_t >= duration - 0.05) _t = 0;
     setState(() => _playing = true);
     _timer = Timer.periodic(const Duration(milliseconds: 40), (_) {
+      if (!mounted) {
+        _timer?.cancel();
+        return;
+      }
       final next = _t + 0.04;
       setState(() {
         if (next >= duration) {
@@ -211,6 +247,30 @@ class _EditorScreenState extends State<EditorScreen> {
     if (_redo.isEmpty) return;
     _undo.add(current);
     await AppScope.of(context).updatePlan(widget.projectId, _redo.removeLast());
+  }
+
+  /// Drag-to-reorder on the timeline: walks the shot from its current index
+  /// to [targetIndex] one ripple-safe `PlanOps.move` step at a time, but
+  /// applies the result as a single undoable change (not one per step).
+  Future<void> _reorderShot(
+    Map<String, dynamic> json,
+    String shotId,
+    int targetIndex,
+  ) async {
+    var current = json;
+    var i = (current['shots'] as List).cast<Map<String, dynamic>>().indexWhere(
+      (s) => s['id'] == shotId,
+    );
+    if (i < 0) return;
+    while (i < targetIndex) {
+      current = PlanOps.move(current, shotId, 1);
+      i++;
+    }
+    while (i > targetIndex) {
+      current = PlanOps.move(current, shotId, -1);
+      i--;
+    }
+    if (current != json) await _apply(json, current);
   }
 
   /// Imports videos or photos into this project and appends them to the
@@ -485,7 +545,14 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   Widget build(BuildContext context) => Theme(
-    data: buildTheme(Brightness.dark),
+    data: buildTheme(Brightness.dark).copyWith(
+      scaffoldBackgroundColor: EditorTokens.palette.background,
+      extensions: [
+        ...buildTheme(Brightness.dark).extensions.values
+            .where((e) => e is! AppPalette),
+        EditorTokens.palette,
+      ],
+    ),
     child: Builder(builder: _buildEditor),
   );
 
@@ -560,6 +627,7 @@ class _EditorScreenState extends State<EditorScreen> {
     final ratio = switch (plan.aspectRatio) {
       '16:9' => 16 / 9,
       '1:1' => 1.0,
+      '4:5' => 4 / 5,
       _ => 9 / 16,
     };
     final mono = TextStyle(
@@ -572,370 +640,135 @@ class _EditorScreenState extends State<EditorScreen> {
     return Scaffold(
       backgroundColor: p.background,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Top bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 16, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      LucideIcons.chevronDown,
+        child: EditorWorkspace(
+          hasSelection: selected != null,
+          onClearSelection: () => setState(() => _selected = null),
+          header: Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 16, 0),
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: 'Loyihaga qaytish',
+                  icon: const Icon(
+                    LucideIcons.chevronDown,
+                    color: Colors.white,
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                IconButton(
+                  tooltip: 'Bekor qilish',
+                  onPressed: _undo.isEmpty ? null : () => _undoStep(json),
+                  icon: Icon(
+                    LucideIcons.undo2,
+                    color: _undo.isEmpty ? p.separator : Colors.white,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Qaytarish',
+                  onPressed: _redo.isEmpty ? null : () => _redoStep(json),
+                  icon: Icon(
+                    LucideIcons.redo2,
+                    color: _redo.isEmpty ? p.separator : Colors.white,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    project.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
                       color: Colors.white,
-                    ),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  Expanded(
-                    child: Text(
-                      project.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () =>
-                        showExportSheet(context, project: project, plan: plan),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: p.accent,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            LucideIcons.download,
-                            size: 16,
-                            color: p.onAccent,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Saqlash',
-                            style: TextStyle(
-                              color: p.onAccent,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Preview
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 6,
-                    horizontal: 40,
-                  ),
-                  child: AspectRatio(
-                    aspectRatio: ratio,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              shotColor(idx).withValues(alpha: 0.75),
-                              const Color(0xFF050507),
-                            ],
-                          ),
-                        ),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            if (imageClip != null)
-                              _graded(
-                                plan.grade,
-                                Image.file(
-                                  File(imageClip.path),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            if (vctl != null && vctl.value.isInitialized)
-                              _graded(
-                                plan.grade,
-                                FittedBox(
-                                  fit: BoxFit.cover,
-                                  clipBehavior: Clip.hardEdge,
-                                  child: SizedBox(
-                                    width: vctl.value.size.width,
-                                    height: vctl.value.size.height,
-                                    child: VideoPlayer(vctl),
-                                  ),
-                                ),
-                              ),
-                            ..._logoPreview(plan, project),
-                            Padding(
-                              padding: const EdgeInsets.all(14),
-                              child: PreviewOverlay(
-                                index: idx,
-                                description: shot.description,
-                                caption: caption,
-                                hasVideo:
-                                    imageClip != null ||
-                                    (vctl != null && vctl.value.isInitialized),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-              ),
-            ),
-            // Transport
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: 'Bekor qilish',
-                    onPressed: _undo.isEmpty ? null : () => _undoStep(json),
-                    icon: Icon(
-                      LucideIcons.undo2,
-                      color: _undo.isEmpty ? p.separator : Colors.white,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Qaytarish',
-                    onPressed: _redo.isEmpty ? null : () => _redoStep(json),
-                    icon: Icon(
-                      LucideIcons.redo2,
-                      color: _redo.isEmpty ? p.separator : Colors.white,
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          '${timecode(_t)} / ${timecode(plan.durationSec)}',
-                          style: mono.copyWith(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: _playing ? 'Pauza' : 'Ijro',
-                    iconSize: 30,
-                    onPressed: () => _togglePlay(plan.durationSec),
-                    icon: Icon(
-                      _playing
-                          ? LucideIcons.circlePause
-                          : LucideIcons.circlePlay,
-                      color: Colors.white,
-                      size: 38,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Timeline (pinch with two fingers to zoom)
-            Listener(
-              onPointerDown: _onPointerDown,
-              onPointerMove: _onPointerMove,
-              onPointerUp: _onPointerUp,
-              onPointerCancel: _onPointerUp,
-              child: EditorTimeline(
-                plan: plan,
-                t: _t,
-                pps: _pps,
-                selectedId: _selected,
-                onSeek: (v) => setState(() {
-                  _stop();
-                  _t = v;
-                }),
-                onSelect: (s) => setState(() {
-                  _stop();
-                  _selected = s.id;
-                  _t = s.startSec;
-                }),
-                onCaptionTap: (i, text) => _editCaption(json, i, text),
-              ),
-            ),
-            // Inspector
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              child: selected == null
-                  ? Padding(
-                      key: const ValueKey('hint'),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      child: Text(
-                        'Tahrirlash uchun kadrni tanlang',
-                        style: AppText.caption(context),
-                      ),
-                    )
-                  : Padding(
-                      key: ValueKey(selected.id),
-                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: p.surface,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: shotColor(selIndex),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Kadr ${selIndex + 1}',
-                                    style: TextStyle(
-                                      color: p.textPrimary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  if (app.proMode)
-                                    Text(
-                                      [
-                                        if (selected.camera != null)
-                                          selected.camera!,
-                                        if (selected.transitionIn != null)
-                                          selected.transitionIn!,
-                                      ].join(' · '),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: AppText.caption(context)
-                                          .copyWith(fontSize: 12),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            DurationStepper(
-                              value: selected.duration,
-                              onMinus: () => _apply(
-                                json,
-                                PlanOps.resizeShot(
-                                  json,
-                                  selected.id,
-                                  selected.duration - 0.5,
-                                ),
-                              ),
-                              onPlus: () => _apply(
-                                json,
-                                PlanOps.resizeShot(
-                                  json,
-                                  selected.id,
-                                  selected.duration + 0.5,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: plan.shots.length <= 1
-                                  ? null
-                                  : () {
-                                      final next = PlanOps.removeShot(
-                                        json,
-                                        selected.id,
-                                      );
-                                      if (next != null) {
-                                        setState(() => _selected = null);
-                                        _apply(json, next);
-                                      }
-                                    },
-                              icon: const Icon(
-                                LucideIcons.trash2,
-                                color: AppColors.danger,
-                                size: 22,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-            ),
-            if (selected != null)
-              ShotToolsBar(
-                canSplit:
-                    _t > selected.startSec + PlanOps.minShot &&
-                    _t < selected.endSec - PlanOps.minShot,
-                canMoveLeft: selIndex > 0,
-                canMoveRight: selIndex < plan.shots.length - 1,
-                canTrim:
-                    selected.sourceIn != null &&
-                    selected.duration > PlanOps.minShot + 0.25,
-                onSplit: () {
-                  final next = PlanOps.splitAt(json, _t);
-                  if (next != null) _apply(json, next);
-                },
-                onDuplicate: () =>
-                    _apply(json, PlanOps.duplicate(json, selected.id)),
-                onLeft: () => _apply(json, PlanOps.move(json, selected.id, -1)),
-                onRight: () => _apply(json, PlanOps.move(json, selected.id, 1)),
-                onTrimHead: () =>
-                    _apply(json, PlanOps.trimStart(json, selected.id, 0.25)),
-                onEffects: () => _showEffects(selected.id),
-                canFreeze:
-                    selected.sourceClipId != null &&
-                    !selected.freeze &&
-                    project.clip(selected.sourceClipId)?.isImage != true,
-                onFreeze: () {
-                  final next = PlanOps.insertFreezeFrame(json, _t);
-                  if (next != null) _apply(json, next);
-                },
-              ),
-            // Kadr AI: say what to change, in your own words.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-              child: Material(
-                color: p.surface,
-                borderRadius: BorderRadius.circular(24),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(24),
-                  onTap: () => _showClaude(json),
+                InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () =>
+                      showExportSheet(context, project: project, plan: plan),
                   child: Container(
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    constraints: const BoxConstraints(
+                      minHeight: EditorTokens.touchTarget,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: p.separator, width: 0.8),
+                      color: p.accent,
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(LucideIcons.sparkles, size: 18, color: p.accent),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Kadr AI’ga ayting: “15 soniyaga qisqartir”',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: p.textSecondary,
-                              fontSize: 15,
+                        Icon(LucideIcons.download, size: 16, color: p.onAccent),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Eksport',
+                          style: TextStyle(
+                            color: p.onAccent,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          preview: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              child: AspectRatio(
+                aspectRatio: ratio,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          shotColor(idx).withValues(alpha: 0.75),
+                          const Color(0xFF050507),
+                        ],
+                      ),
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (imageClip != null)
+                          _graded(
+                            plan.grade,
+                            Image.file(File(imageClip.path), fit: BoxFit.cover),
+                          ),
+                        if (vctl != null && vctl.value.isInitialized)
+                          _graded(
+                            plan.grade,
+                            FittedBox(
+                              fit: BoxFit.cover,
+                              clipBehavior: Clip.hardEdge,
+                              child: SizedBox(
+                                width: vctl.value.size.width,
+                                height: vctl.value.size.height,
+                                child: VideoPlayer(vctl),
+                              ),
                             ),
+                          ),
+                        ..._logoPreview(plan, project),
+                        Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: PreviewOverlay(
+                            index: idx,
+                            description: shot.description,
+                            caption: caption,
+                            hasVideo:
+                                imageClip != null ||
+                                (vctl != null && vctl.value.isInitialized),
                           ),
                         ),
                       ],
@@ -944,52 +777,318 @@ class _EditorScreenState extends State<EditorScreen> {
                 ),
               ),
             ),
-            // Tools, each with its name under the icon.
-            SizedBox(
-              height: 74,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                children: [
-                  ToolButton(
-                    icon: LucideIcons.plus,
-                    label: 'Qo‘shish',
-                    onTap: () => _addMedia(json),
-                  ),
-                  ToolButton(
-                    icon: LucideIcons.type,
-                    label: 'Matn',
-                    onTap: () => _addCaption(json),
-                  ),
-                  ToolButton(
-                    icon: LucideIcons.music,
-                    label: 'Musiqa',
-                    active: plan.music != null,
-                    onTap: () => _showMusic(json),
-                  ),
-                  ToolButton(
-                    icon: LucideIcons.palette,
-                    label: 'Rang',
-                    active: plan.grade != null || plan.logo != null,
-                    onTap: _showLook,
-                  ),
-                  ToolButton(
-                    icon: LucideIcons.audioLines,
-                    label: 'Ritm',
-                    onTap: plan.music == null
-                        ? null
-                        : () => _beatSync(json, plan),
-                  ),
-                  if (app.proMode)
-                    ToolButton(
-                      icon: LucideIcons.layers,
-                      label: 'Materiallar',
-                      onTap: () => _showSlots(plan),
+          ),
+          transport: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: 'Oldingi kadr',
+                  onPressed: _playing || _t <= 0
+                      ? null
+                      : () => setState(() {
+                          _t =
+                              ((_t * plan.export.fps).round() - 1).clamp(
+                                0,
+                                (plan.durationSec * plan.export.fps).round(),
+                              ) /
+                              plan.export.fps;
+                        }),
+                  icon: const Icon(LucideIcons.skipBack),
+                ),
+                Expanded(
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '${timecode(_t)} / ${timecode(plan.durationSec)}',
+                        style: mono.copyWith(color: Colors.white),
+                      ),
                     ),
-                ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: _playing ? 'Pauza' : 'Ijro',
+                  iconSize: 30,
+                  onPressed: () => _togglePlay(plan.durationSec),
+                  icon: Icon(
+                    _playing ? LucideIcons.circlePause : LucideIcons.circlePlay,
+                    color: Colors.white,
+                    size: 38,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Keyingi kadr',
+                  onPressed: _playing || _t >= plan.durationSec
+                      ? null
+                      : () => setState(() {
+                          _t =
+                              ((_t * plan.export.fps).round() + 1).clamp(
+                                0,
+                                (plan.durationSec * plan.export.fps).round(),
+                              ) /
+                              plan.export.fps;
+                        }),
+                  icon: const Icon(LucideIcons.skipForward),
+                ),
+              ],
+            ),
+          ),
+          timeline: Listener(
+            onPointerDown: _onPointerDown,
+            onPointerMove: _onPointerMove,
+            onPointerUp: _onPointerUp,
+            onPointerCancel: _onPointerUp,
+            child: EditorTimeline(
+              plan: plan,
+              t: _t,
+              pps: _pps,
+              selectedId: _selected,
+              onSeek: (v) => setState(() {
+                _stop();
+                _t = v;
+              }),
+              onSelect: (s) => setState(() {
+                _stop();
+                _selected = s.id;
+                _t = s.startSec;
+              }),
+              onCaptionTap: (i, text) => _editCaption(json, i, text),
+              planJson: json,
+              sourceSeconds: {
+                for (final c in project.clips)
+                  if (c.durationSec != null) c.id: c.durationSec!,
+              },
+              // One drag = one undo step; the preview then shows the edge.
+              onTrimCommit: (next, edgeSec) async {
+                await _apply(json, next);
+                if (!mounted) return;
+                setState(() {
+                  _stop();
+                  _t = edgeSec;
+                });
+              },
+              onReorder: (shotId, targetIndex) =>
+                  _reorderShot(json, shotId, targetIndex),
+            ),
+          ),
+          inspector: AnimatedSwitcher(
+            duration: EditorTokens.motion(context),
+            child: selected == null
+                ? Padding(
+                    key: const ValueKey('hint'),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    child: Text(
+                      'Tahrirlash uchun kadrni tanlang',
+                      style: AppText.caption(context),
+                    ),
+                  )
+                : Padding(
+                    key: ValueKey(selected.id),
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: p.surface,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: shotColor(selIndex),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Kadr ${selIndex + 1}',
+                                  style: TextStyle(
+                                    color: p.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (app.proMode)
+                                  Text(
+                                    [
+                                      if (selected.camera != null)
+                                        selected.camera!,
+                                      if (selected.transitionIn != null)
+                                        selected.transitionIn!,
+                                    ].join(' · '),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppText.caption(context)
+                                        .copyWith(fontSize: 12),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          DurationStepper(
+                            value: selected.duration,
+                            onMinus: () => _apply(
+                              json,
+                              PlanOps.resizeShot(
+                                json,
+                                selected.id,
+                                selected.duration - 0.5,
+                              ),
+                            ),
+                            onPlus: () => _apply(
+                              json,
+                              PlanOps.resizeShot(
+                                json,
+                                selected.id,
+                                selected.duration + 0.5,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: plan.shots.length <= 1
+                                ? null
+                                : () {
+                                    final next = PlanOps.removeShot(
+                                      json,
+                                      selected.id,
+                                    );
+                                    if (next != null) {
+                                      setState(() => _selected = null);
+                                      _apply(json, next);
+                                    }
+                                  },
+                            icon: const Icon(
+                              LucideIcons.trash2,
+                              color: AppColors.danger,
+                              size: 22,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+          shotTools: selected != null
+              ? ShotToolsBar(
+                  canSplit:
+                      _t > selected.startSec + PlanOps.minShot &&
+                      _t < selected.endSec - PlanOps.minShot,
+                  canMoveLeft: selIndex > 0,
+                  canMoveRight: selIndex < plan.shots.length - 1,
+                  canTrim:
+                      selected.sourceIn != null &&
+                      selected.duration > PlanOps.minShot + 0.25,
+                  onSplit: () {
+                    final next = PlanOps.splitAt(json, _t);
+                    if (next != null) _apply(json, next);
+                  },
+                  onDuplicate: () =>
+                      _apply(json, PlanOps.duplicate(json, selected.id)),
+                  onLeft: () =>
+                      _apply(json, PlanOps.move(json, selected.id, -1)),
+                  onRight: () =>
+                      _apply(json, PlanOps.move(json, selected.id, 1)),
+                  onTrimHead: () =>
+                      _apply(json, PlanOps.trimStart(json, selected.id, 0.25)),
+                  onEffects: () => _showEffects(selected.id),
+                  canFreeze:
+                      selected.sourceClipId != null &&
+                      !selected.freeze &&
+                      project.clip(selected.sourceClipId)?.isImage != true,
+                  onFreeze: () {
+                    final next = PlanOps.insertFreezeFrame(json, _t);
+                    if (next != null) _apply(json, next);
+                  },
+                )
+              : const SizedBox.shrink(),
+          assistant: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            child: Material(
+              color: p.surface,
+              borderRadius: BorderRadius.circular(24),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: () => _showClaude(json),
+                child: Container(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: p.separator, width: 0.8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(LucideIcons.sparkles, size: 18, color: p.accent),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Kadr AI’ga ayting: “15 soniyaga qisqartir”',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: p.textSecondary,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ],
+          ),
+          tools: SizedBox(
+            height: EditorTokens.toolbarHeight,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              children: [
+                ToolButton(
+                  icon: LucideIcons.plus,
+                  label: 'Qo‘shish',
+                  onTap: () => _addMedia(json),
+                ),
+                ToolButton(
+                  icon: LucideIcons.type,
+                  label: 'Matn',
+                  onTap: () => _addCaption(json),
+                ),
+                ToolButton(
+                  icon: LucideIcons.music,
+                  label: 'Musiqa',
+                  active: plan.music != null,
+                  onTap: () => _showMusic(json),
+                ),
+                ToolButton(
+                  icon: LucideIcons.palette,
+                  label: 'Rang',
+                  active: plan.grade != null || plan.logo != null,
+                  onTap: _showLook,
+                ),
+                ToolButton(
+                  icon: LucideIcons.audioLines,
+                  label: 'Ritm',
+                  onTap: plan.music == null
+                      ? null
+                      : () => _beatSync(json, plan),
+                ),
+                if (app.proMode)
+                  ToolButton(
+                    icon: LucideIcons.layers,
+                    label: 'Materiallar',
+                    onTap: () => _showSlots(plan),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

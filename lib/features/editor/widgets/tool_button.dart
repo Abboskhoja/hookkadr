@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/editor_tokens.dart';
 
 /// Icon with its name underneath, so nobody has to guess what it does.
 class ToolButton extends StatelessWidget {
@@ -20,27 +21,37 @@ class ToolButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final color = onTap == null
-        ? p.separator
+        ? p.muted
         : active
         ? p.accent
-        : Colors.white;
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: SizedBox(
-        width: 70,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: color, fontSize: 12),
+        : p.textPrimary;
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      selected: active,
+      label: label,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: label,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(EditorTokens.toolRadius),
+          onTap: onTap,
+          child: SizedBox(
+            width: EditorTokens.toolWidth,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: color, size: 22),
+                const SizedBox(height: 6),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: color, fontSize: 12),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

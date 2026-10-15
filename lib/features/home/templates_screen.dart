@@ -81,50 +81,162 @@ class TemplatesScreen extends StatelessWidget {
       title: 'Shablonlar',
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          sliver: SliverList.separated(
-            itemCount: VideoTemplate.all.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, i) {
-              final t = VideoTemplate.all[i];
-              return Material(
-                color: p.surface,
-                borderRadius: BorderRadius.circular(20),
-                clipBehavior: Clip.antiAlias,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  leading: GlassIcon(
-                    t.icon,
-                    color: t.photos ? AppColors.brown : AppColors.blue,
-                    tint: t.photos ? AppColors.coral : null,
-                  ),
-                  title: Text(
-                    t.title,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text('${t.from} · ${t.seconds} s'),
-                  trailing: Icon(
-                    LucideIcons.chevronRight,
-                    size: 18,
-                    color: p.muted,
-                  ),
-                  onTap: () => t.photos
-                      ? startProductAd(
-                          context,
-                          seconds: t.seconds,
-                          aspect: t.aspect,
-                        )
-                      : onAsk(
-                          KadrRequest(
-                            KadrMode.montage,
-                            aspect: t.aspect,
-                            seconds: t.seconds,
-                          ),
-                        ),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          sliver: SliverToBoxAdapter(
+            child: Text(
+              'Yangi video uchun tayyor yo‘nalish.\nMateriallaringizni tanlang va o‘z uslubingizda yarating.',
+              style: AppText.body(context).copyWith(color: p.textSecondary),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverLayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.crossAxisExtent >= 900
+                  ? 3
+                  : constraints.crossAxisExtent >= 560
+                  ? 2
+                  : 1;
+              return SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  mainAxisExtent:
+                      310 +
+                      (MediaQuery.textScalerOf(context).scale(1) - 1).clamp(
+                            0,
+                            2,
+                          ) *
+                          100,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
                 ),
+                delegate: SliverChildBuilderDelegate((context, i) {
+                  final t = VideoTemplate.all[i];
+                  return Material(
+                    color: p.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      side: BorderSide(color: p.separator),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => t.photos
+                          ? startProductAd(
+                              context,
+                              seconds: t.seconds,
+                              aspect: t.aspect,
+                            )
+                          : onAsk(
+                              KadrRequest(
+                                KadrMode.montage,
+                                aspect: t.aspect,
+                                seconds: t.seconds,
+                              ),
+                            ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.asset(
+                                  t.photos
+                                      ? 'assets/images/template_product.png'
+                                      : 'assets/images/studio_hero.png',
+                                  fit: BoxFit.cover,
+                                  alignment: Alignment(0, (i % 3 - 1) * 0.6),
+                                  excludeFromSemantics: true,
+                                ),
+                                const DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Color(0xAA080D14),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  left: 16,
+                                  bottom: 14,
+                                  child: Text(
+                                    '${t.aspect}  ·  ${t.seconds} SONIYA',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ),
+                                const Positioned(
+                                  right: 16,
+                                  top: 14,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: Color(0xCC080D14),
+                                      borderRadius: BorderRadius.all(
+                                        Radius.circular(8),
+                                      ),
+                                    ),
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 5,
+                                      ),
+                                      child: Text(
+                                        'Muqova namunasi',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(18),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        t.title,
+                                        style: AppText.title(context),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        t.from,
+                                        style: AppText.caption(context),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Icon(
+                                  LucideIcons.arrowUpRight,
+                                  color: p.accent,
+                                  size: 22,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }, childCount: VideoTemplate.all.length),
               );
             },
           ),

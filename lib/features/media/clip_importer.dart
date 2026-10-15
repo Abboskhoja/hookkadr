@@ -83,8 +83,15 @@ class ClipImporter {
   /// Fills duration, size and thumbnail; failures leave fields null.
   Future<void> measure(ImportedClip c) async {
     if (c.isImage) {
-      c.sizeBytes = await File(c.path).length();
-      c.thumb = await File(c.path).readAsBytes();
+      try {
+        final file = File(c.path);
+        if (!await file.exists()) return;
+        c.sizeBytes = await file.length();
+        c.thumb = await file.readAsBytes();
+      } catch (_) {
+        // A provider can remove a picked file before measurement. Keep the
+        // import flow alive and leave the optional facts unavailable.
+      }
       return;
     }
     try {

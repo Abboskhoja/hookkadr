@@ -42,6 +42,9 @@ void main() {
     );
     await tester.tap(find.text('Bajarish'));
     await tester.pumpAndSettle();
+    expect(find.text('AI montajchi taklifi'), findsOneWidget);
+    await tester.tap(find.text('Qo‘llash'));
+    await tester.pumpAndSettle();
     expect(
       app.byId(project.id)!.planJson['production']['schema'],
       'kart.production/1',
@@ -173,6 +176,9 @@ void main() {
     await tester.tap(find.text('Bajarish'));
     await tester.pumpAndSettle();
 
+    expect(find.text('AI montajchi taklifi'), findsOneWidget);
+    await tester.tap(find.text('Qo‘llash'));
+    await tester.pumpAndSettle();
     var plan = EditPlan.fromJson(app.byId(project.id)!.planJson);
     expect(plan.durationSec, closeTo(6, 0.2));
     expect(plan.grade, isNotNull);
@@ -251,6 +257,9 @@ void main() {
 
     // "Tuzat" runs the suggested command for real.
     await tester.tap(find.text('Tuzat').first);
+    await tester.pumpAndSettle();
+    expect(find.text('AI montajchi taklifi'), findsOneWidget);
+    await tester.tap(find.text('Qo‘llash'));
     await tester.pumpAndSettle();
     final plan = EditPlan.fromJson(app.byId(project.id)!.planJson);
     expect(plan.shots.first.motion, ShotMotion.punchIn);

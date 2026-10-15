@@ -78,6 +78,29 @@ void main() {
         );
       }
     });
+
+    test('the Android push script pins the same files and hashes', () {
+      final script = File('tool/push_kadr_models_android.sh')
+          .readAsStringSync();
+      for (final p in KadrModelPack.all) {
+        expect(
+          script,
+          contains('"${p.fileName}|${p.sha256}|${p.sizeBytes}"'),
+          reason: p.id,
+        );
+      }
+    });
+
+    test('a bundled pack is found on Android\'s external files dir', () {
+      // _defaultBundled() can't be driven from a desktop test run (Platform
+      // checks are compile-time true/false here), so this only pins the
+      // path string itself against regressions.
+      const expected =
+          '/storage/emulated/0/Android/data/com.hookkadr.hookkadr/files/KadrModels';
+      final manager = File('lib/features/kadr_ai/model_manager.dart')
+          .readAsStringSync();
+      expect(manager, contains(expected));
+    });
   });
 
   group('automatic setup', () {

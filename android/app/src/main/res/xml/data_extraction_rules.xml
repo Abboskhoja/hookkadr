@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Closes the Android 12+ paths that `android:allowBackup="false"` alone
+  does not cover — device-to-device transfer when setting up a new phone
+  is a separate mechanism from cloud backup and isn't gated by
+  allowBackup. Chat history and Kadr AI's "Eslab qol" memory are personal,
+  so nothing in app data leaves the device either way.
+-->
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapability="true">
+        <exclude domain="root" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+    </device-transfer>
+</data-extraction-rules>

@@ -3,7 +3,12 @@
         android:label="HOOKKADR"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher">
+        android:roundIcon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules">
+        <!-- Chat history and "Eslab qol" memory are personal; nothing here
+             is backed up (Android Auto Backup, Google's cloud backup, or
+             `adb backup`) — not to the OS default, not by exception. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

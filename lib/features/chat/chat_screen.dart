@@ -7,7 +7,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gal/gal.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
@@ -1689,7 +1688,14 @@ class _EmptyHome extends StatelessWidget {
       builder: (context, box) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
         child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: box.maxHeight - 24),
+          // Centers the welcome content when there's room to spare, but
+          // never demands more height than is actually available — with
+          // the keyboard up (and the composer + header still fixed above
+          // and below this scroll area) maxHeight can drop under 24,
+          // which used to make this a NEGATIVE minHeight and crash.
+          constraints: BoxConstraints(
+            minHeight: (box.maxHeight - 24).clamp(0, double.infinity),
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1875,7 +1881,8 @@ class _LiveReply extends StatelessWidget {
         children: [
           lightMarkdown(
             text,
-            GoogleFonts.inter(
+            TextStyle(
+              fontFamily: 'Inter',
               color: context.palette.textPrimary,
               fontSize: 16,
               height: 1.55,
@@ -2071,7 +2078,8 @@ class _MessageView extends StatelessWidget {
                   : Text.rich(
                       lightMarkdown(
                         msg.text,
-                        GoogleFonts.inter(
+                        TextStyle(
+                          fontFamily: 'Inter',
                           color: p.textPrimary,
                           fontSize: 16,
                           height: 1.55,

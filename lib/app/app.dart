@@ -16,7 +16,9 @@ class HookkadrApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
-      // Light and warm by default (product decision 2026-10-14).
+      // Light and warm: the user's explicit choice (re-confirmed 2026-10-15
+      // over pasted "cinematic dark" briefs). Only the video editor is dark —
+      // it wraps itself in its own dark theme (EditorTokens.palette).
       themeMode: ThemeMode.light,
       home: const HomeShell(),
     ),

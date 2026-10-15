@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'semantic_colors.dart';
 
@@ -71,16 +70,16 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
   /// Navy and dark brown; used by the video editor and dark-mode phones.
   static const dark = AppPalette(
-    background: Color(0xFF0F141B),
-    surface: Color(0xFF19202A),
-    surfaceRaised: Color(0xFF243040),
-    separator: Color(0xFF3A4757),
-    textPrimary: Color(0xFFF5F1EA),
-    textSecondary: Color(0xFFC9BEB0),
-    accent: AppColors.blueLight,
-    onAccent: Color(0xFF0F141B),
-    muted: Color(0xFFA89D8F),
-    selected: Color(0xFF2A3546),
+    background: Color(0xFF080D14),
+    surface: Color(0xFF0D1621),
+    surfaceRaised: Color(0xFF14202B),
+    separator: Color(0xFF273748),
+    textPrimary: Color(0xFFEAF3FB),
+    textSecondary: Color(0xFFA9B9CB),
+    accent: Color(0xFF6BC9FF),
+    onAccent: Color(0xFF080D14),
+    muted: Color(0xFF74869A),
+    selected: Color(0xFF1B2A39),
   );
 
   /// Cream background, white cards, sand raised areas, blue actions.
@@ -232,25 +231,29 @@ ThemeData buildTheme(Brightness brightness) {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
     ),
-    textTheme: GoogleFonts.interTextTheme(
-      (brightness == Brightness.dark
-              ? Typography.material2021().white
-              : Typography.material2021().black)
-          .apply(bodyColor: p.textPrimary, displayColor: p.textPrimary),
-    ),
+    fontFamily: 'Inter',
+    textTheme:
+        (brightness == Brightness.dark
+                ? Typography.material2021().white
+                : Typography.material2021().black)
+            .apply(
+              fontFamily: 'Inter',
+              bodyColor: p.textPrimary,
+              displayColor: p.textPrimary,
+            ),
   );
 }
 
 abstract final class AppText {
   /// Display 30–34 px SemiBold (spec 3.3).
-  static TextStyle display(BuildContext c, {double size = 32}) =>
-      GoogleFonts.inter(
-        fontSize: size,
-        height: 1.15,
-        fontWeight: FontWeight.w600,
-        letterSpacing: -0.6,
-        color: c.palette.textPrimary,
-      );
+  static TextStyle display(BuildContext c, {double size = 32}) => TextStyle(
+    fontFamily: 'Inter',
+    fontSize: size,
+    height: 1.15,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.6,
+    color: c.palette.textPrimary,
+  );
 
   static TextStyle largeTitle(BuildContext c) => TextStyle(
     fontSize: 34,
